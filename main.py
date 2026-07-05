@@ -29,12 +29,35 @@ app.add_middleware(
 # request does the work and the rest hit the warm cache.
 _load_lock = threading.Lock()
 
+# FastF1 session identifiers we expose. Anything else in the query -> 422
+# instead of arbitrary strings reaching fastf1.get_session.
+VALID_SESSIONS = {"FP1", "FP2", "FP3", "Q", "SQ", "S", "R"}
 
-def load_session(year: int, round: int, telemetry: bool):
+# Schedule lists sessions by display name; the other endpoints take codes.
+SESSION_CODES = {
+    "Practice 1": "FP1",
+    "Practice 2": "FP2",
+    "Practice 3": "FP3",
+    "Qualifying": "Q",
+    "Sprint Qualifying": "SQ",
+    "Sprint Shootout": "SQ",  # 2023 naming for the same thing
+    "Sprint": "S",
+    "Race": "R",
+}
+
+
+def load_session(year: int, round: int, session: str, telemetry: bool):
     with _load_lock:
-        session = fastf1.get_session(year, round, "Q")
-        session.load(telemetry=telemetry, weather=False, messages=False)
-        return session
+        s = fastf1.get_session(year, round, session)
+        s.load(telemetry=telemetry, weather=False, messages=False)
+        return s
+
+
+def check_session_code(session: str) -> str:
+    code = session.upper()
+    if code not in VALID_SESSIONS:
+        raise HTTPException(status_code=422, detail=f"Unknown session '{session}'")
+    return code
 
 
 def format_lap_time(td) -> str:
@@ -62,6 +85,13 @@ def get_schedule(year: int):
                 "name": row["EventName"],
                 "country": row["Country"],
                 "date": str(row["EventDate"].date()),
+                # which sessions this weekend ran (sprint weekends differ) —
+                # Session1..Session5 are display names in the schedule table
+                "sessions": [
+                    {"code": SESSION_CODES[name], "name": name}
+                    for name in (row[f"Session{i}"] for i in range(1, 6))
+                    if name in SESSION_CODES
+                ],
             }
             for _, row in past.iterrows()
         ],
@@ -69,11 +99,13 @@ def get_schedule(year: int):
 
 
 @app.get("/drivers")
-def get_drivers(year: int, round: int):
-    # Who took part in this qualifying -> feeds the driver dropdowns.
-    # TeamColor gives each driver their real team color for the charts.
+def get_drivers(year: int, round: int, session: str = "Q"):
+    # Who took part in this session -> feeds the driver picker, in
+    # classification order. TeamColor gives each driver their real team
+    # color for the charts.
+    code = check_session_code(session)
     try:
-        session = load_session(year, round, telemetry=False)
+        session_obj = load_session(year, round, code, telemetry=False)
     except Exception:
         raise HTTPException(status_code=404, detail="Session not found or not loadable")
     return {
@@ -84,16 +116,17 @@ def get_drivers(year: int, round: int):
                 "team": row["TeamName"],
                 "color": f"#{row['TeamColor']}" if row["TeamColor"] else "#888888",
             }
-            for _, row in session.results.iterrows()
+            for _, row in session_obj.results.iterrows()
         ]
     }
 
 
 @app.get("/telemetry")
-def get_telemetry(year: int, round: int, driver: str):
+def get_telemetry(year: int, round: int, driver: str, session: str = "Q"):
+    code = check_session_code(session)
     try:
-        session = load_session(year, round, telemetry=True)
-        lap = session.laps.pick_drivers(driver).pick_fastest()
+        session_obj = load_session(year, round, code, telemetry=True)
+        lap = session_obj.laps.pick_drivers(driver).pick_fastest()
         if lap is None:
             raise HTTPException(status_code=404, detail=f"No lap found for {driver}")
         tel = lap.get_telemetry()
@@ -110,13 +143,14 @@ def get_telemetry(year: int, round: int, driver: str):
     data = data.round({"Distance": 1, "Speed": 1, "X": 0, "Y": 0, "Time": 3})
     result = {
         "driver": driver,
+        "session": code,
         "lap_time": format_lap_time(lap["LapTime"]),
         "telemetry": data.to_dict(orient="records"),
     }
     # A full session is hundreds of MB of DataFrames; on a 512MB instance we
     # want that memory back the moment the response is built, not whenever
     # Python gets around to it.
-    del session, lap, tel, data
+    del session_obj, lap, tel, data
     gc.collect()
     return result
 
