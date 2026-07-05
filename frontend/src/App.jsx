@@ -8,13 +8,14 @@ import {
   Tooltip,
 } from "chart.js";
 import { ping, fetchSchedule, fetchDrivers, fetchTelemetry } from "./api";
+import { crosshairSync } from "./crosshairSync";
 import Header from "./components/Header";
 import Cover from "./components/Cover";
 import SessionPicker from "./components/SessionPicker";
 import ChannelChart from "./components/ChannelChart";
 
 // Chart.js is modular — register only the pieces we use.
-ChartJS.register(LineElement, PointElement, LinearScale, Filler, Tooltip);
+ChartJS.register(LineElement, PointElement, LinearScale, Filler, Tooltip, crosshairSync);
 
 const DEFAULT_YEAR = 2024;
 
