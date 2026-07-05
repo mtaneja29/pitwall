@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 import os
+import threading
 import uvicorn
 import pandas as pd
 import fastf1
@@ -19,6 +20,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# FastAPI runs sync endpoints in a thread pool, so concurrent requests can
+# each start a full FastF1 session download — enough to exhaust the free
+# tier's 512MB and 502 the whole service. Serializing loads means the first
+# request does the work and the rest hit the warm cache.
+_load_lock = threading.Lock()
+
+
+def load_session(year: int, round: int, telemetry: bool):
+    with _load_lock:
+        session = fastf1.get_session(year, round, "Q")
+        session.load(telemetry=telemetry, weather=False, messages=False)
+        return session
 
 
 def format_lap_time(td) -> str:
@@ -57,8 +72,7 @@ def get_drivers(year: int, round: int):
     # Who took part in this qualifying -> feeds the driver dropdowns.
     # TeamColor gives each driver their real team color for the charts.
     try:
-        session = fastf1.get_session(year, round, "Q")
-        session.load(telemetry=False, weather=False, messages=False)
+        session = load_session(year, round, telemetry=False)
     except Exception:
         raise HTTPException(status_code=404, detail="Session not found or not loadable")
     return {
@@ -77,8 +91,7 @@ def get_drivers(year: int, round: int):
 @app.get("/telemetry")
 def get_telemetry(year: int, round: int, driver: str):
     try:
-        session = fastf1.get_session(year, round, "Q")
-        session.load(telemetry=True, weather=False, messages=False)
+        session = load_session(year, round, telemetry=True)
         lap = session.laps.pick_drivers(driver).pick_fastest()
         if lap is None:
             raise HTTPException(status_code=404, detail=f"No lap found for {driver}")
