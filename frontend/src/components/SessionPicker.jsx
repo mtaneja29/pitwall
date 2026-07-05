@@ -6,8 +6,8 @@ const YEARS = [2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019];
 function SessionPicker({
   year, onYear,
   events, round, onRound, eventsLoading,
-  drivers, driver, onDriver, driversLoading,
-  onAnalyze, analyzing,
+  drivers, selected, onToggleDriver, driversLoading,
+  onAnalyze, analyzing, analyzeLabel,
 }) {
   return (
     <div className="picker">
@@ -38,28 +38,34 @@ function SessionPicker({
         ))}
       </div>
 
-      <div className="picker-label">Driver</div>
+      <div className="picker-label">
+        Drivers <span className="hint">— pick one, or two to compare</span>
+      </div>
       <div className="driver-grid">
         {driversLoading &&
           [...Array(10)].map((_, i) => <div key={i} className="skeleton" style={{ height: 54 }} />)}
-        {drivers.map((d) => (
-          <button
-            key={d.code}
-            className={`driver-card${d.code === driver ? " sel" : ""}`}
-            style={{ "--team": d.color }}
-            onClick={() => onDriver(d.code)}
-            title={d.team}
-          >
-            <span className="team-bar" />
-            <span className="code">{d.code}</span>
-            <div className="dname">{d.name}</div>
-          </button>
-        ))}
+        {drivers.map((d) => {
+          const slot = selected.indexOf(d.code); // 0 = primary, 1 = comparison
+          return (
+            <button
+              key={d.code}
+              className={`driver-card${slot >= 0 ? " sel" : ""}`}
+              style={{ "--team": d.color }}
+              onClick={() => onToggleDriver(d.code)}
+              title={d.team}
+            >
+              <span className="team-bar" />
+              <span className="code">{d.code}</span>
+              {slot >= 0 && <span className="slot">{slot === 0 ? "A" : "B"}</span>}
+              <div className="dname">{d.name}</div>
+            </button>
+          );
+        })}
       </div>
 
       <div className="picker-footer">
-        <button className="analyze" onClick={onAnalyze} disabled={analyzing || !driver}>
-          {analyzing ? "Loading…" : "Analyze lap"}
+        <button className="analyze" onClick={onAnalyze} disabled={analyzing || selected.length === 0}>
+          {analyzeLabel}
         </button>
       </div>
     </div>

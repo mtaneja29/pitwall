@@ -4,6 +4,7 @@ import {
   LineElement,
   PointElement,
   LinearScale,
+  Filler,
   Tooltip,
 } from "chart.js";
 import { ping, fetchSchedule, fetchDrivers, fetchTelemetry } from "./api";
@@ -13,9 +14,15 @@ import SessionPicker from "./components/SessionPicker";
 import ChannelChart from "./components/ChannelChart";
 
 // Chart.js is modular — register only the pieces we use.
-ChartJS.register(LineElement, PointElement, LinearScale, Tooltip);
+ChartJS.register(LineElement, PointElement, LinearScale, Filler, Tooltip);
 
 const DEFAULT_YEAR = 2024;
+
+// "1:29.179" -> 89.179 seconds, so we can compute the gap between two laps.
+function lapSeconds(str) {
+  const [m, s] = str.split(":");
+  return Number(m) * 60 + Number(s);
+}
 
 function App() {
   // Landing -> app transition: "cover" shows the landing page, "exiting"
@@ -35,19 +42,19 @@ function App() {
   const [round, setRound] = useState(null);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [drivers, setDrivers] = useState([]);
-  const [driver, setDriver] = useState("");
+  // Up to two driver codes; order matters — [0] is the baseline (A), [1] the
+  // comparison (B). One selected = classic single-driver view.
+  const [selected, setSelected] = useState([]);
   const [driversLoading, setDriversLoading] = useState(false);
 
-  // Telemetry + request lifecycle
-  const [telemetry, setTelemetry] = useState(null);
+  // Loaded laps: [{driver, lap_time, telemetry, info}] — 1 or 2 entries.
+  // Kept separate from `selected`, which the user may change afterwards.
+  const [laps, setLaps] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [loadingCode, setLoadingCode] = useState(null); // which driver is fetching now
   const [error, setError] = useState(null);
   const [slow, setSlow] = useState(false); // fetch >4s -> probably a cold start
   const [apiStatus, setApiStatus] = useState("waking");
-
-  // Remember which driver the loaded telemetry belongs to (for color/name),
-  // separate from the dropdown which the user may change afterwards.
-  const [loadedDriver, setLoadedDriver] = useState(null);
 
   // Ping once on mount so the header dot reflects backend state.
   useEffect(() => {
@@ -71,8 +78,8 @@ function App() {
       .finally(() => setEventsLoading(false));
   }, [year]);
 
-  // Race changed -> reload driver list. Keep the same driver selected if
-  // they took part in the newly chosen race (nice when comparing races).
+  // Race changed -> reload driver list. Keep selected drivers that also took
+  // part in the newly chosen race (nice when comparing races).
   useEffect(() => {
     if (round == null) return;
     setDriversLoading(true);
@@ -80,14 +87,24 @@ function App() {
     fetchDrivers(year, round)
       .then((d) => {
         setDrivers(d.drivers);
-        setDriver((prev) =>
-          d.drivers.some((x) => x.code === prev) ? prev : d.drivers[0]?.code ?? ""
-        );
+        setSelected((prev) => prev.filter((c) => d.drivers.some((x) => x.code === c)));
       })
       .catch(() => setError("Couldn't load drivers for that race."))
       .finally(() => setDriversLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [round]);
+
+  // Click a driver card: toggle off if selected; add if there's room;
+  // otherwise swap out the comparison slot and keep the baseline.
+  function toggleDriver(code) {
+    setSelected((prev) =>
+      prev.includes(code)
+        ? prev.filter((c) => c !== code)
+        : prev.length < 2
+          ? [...prev, code]
+          : [prev[0], code]
+    );
+  }
 
   const slowTimer = useRef(null);
 
@@ -98,9 +115,16 @@ function App() {
     // If the response takes >4s, assume Render is cold-starting and say so.
     slowTimer.current = setTimeout(() => setSlow(true), 4000);
     try {
-      const data = await fetchTelemetry(year, round, driver);
-      setTelemetry(data);
-      setLoadedDriver(drivers.find((d) => d.code === driver) ?? null);
+      // Sequential on purpose: the first request downloads + caches the
+      // session server-side, so the second is fast — and the 512MB backend
+      // never sees two heavy loads at once.
+      const results = [];
+      for (const code of selected) {
+        setLoadingCode(code);
+        const data = await fetchTelemetry(year, round, code);
+        results.push({ ...data, info: drivers.find((d) => d.code === code) ?? null });
+      }
+      setLaps(results);
       setApiStatus("live");
     } catch (err) {
       // "Failed to fetch" here usually means the free-tier proxy dropped the
@@ -115,27 +139,47 @@ function App() {
       clearTimeout(slowTimer.current);
       setSlow(false);
       setLoading(false);
+      setLoadingCode(null);
     }
   }
 
-  // ---- shape telemetry into chart series ----
-  const toPoints = (getY) =>
-    telemetry.telemetry.map((p) => ({ x: p.Distance, y: getY(p) }));
+  // ---- shape loaded laps into chart series ----
+  // A and B may be teammates with the same color: B goes dashed in that case.
+  const sameColor =
+    laps?.length === 2 && laps[0].info?.color === laps[1].info?.color;
+
+  const toSeries = (getY, i) => ({
+    label: laps[i].driver,
+    color: laps[i].info?.color ?? (i === 0 ? "#3b82f6" : "#f2f0eb"),
+    dash: i === 1 && sameColor,
+    points: laps[i].telemetry.map((p) => ({ x: p.Distance, y: getY(p) })),
+  });
+
+  const channelSeries = (getY) => laps.map((_, i) => toSeries(getY, i));
 
   const lapLength =
-    telemetry && telemetry.telemetry[telemetry.telemetry.length - 1].Distance;
+    laps && Math.max(...laps.map((l) => l.telemetry[l.telemetry.length - 1].Distance));
 
-  const color = loadedDriver?.color ?? "#3b82f6";
-
-  const channels = telemetry && [
-    { title: "Speed (km/h)", points: toPoints((p) => p.Speed), height: 220 },
-    { title: "Throttle (%)", points: toPoints((p) => p.Throttle), height: 110 },
-    { title: "Brake", points: toPoints((p) => Number(p.Brake)), height: 90, stepped: true },
-    { title: "Gear", points: toPoints((p) => p.nGear), height: 110, stepped: true, showX: true },
+  const channels = laps && [
+    { title: "Speed (km/h)", series: channelSeries((p) => p.Speed), height: 220, fill: laps.length === 1 },
+    { title: "Throttle (%)", series: channelSeries((p) => p.Throttle), height: 110 },
+    { title: "Brake", series: channelSeries((p) => Number(p.Brake)), height: 90, stepped: true },
+    { title: "Gear", series: channelSeries((p) => p.nGear), height: 110, stepped: true, showX: true },
   ];
 
-  const topSpeed = telemetry && Math.max(...telemetry.telemetry.map((p) => p.Speed));
   const eventName = events.find((e) => e.round === round)?.name;
+
+  // Gap between the two laps, signed from B's point of view (+ = B slower).
+  const gap =
+    laps?.length === 2 ? lapSeconds(laps[1].lap_time) - lapSeconds(laps[0].lap_time) : null;
+
+  const analyzeLabel = loading
+    ? loadingCode
+      ? `Loading ${loadingCode}…`
+      : "Loading…"
+    : selected.length === 2
+      ? "Compare laps"
+      : "Analyze lap";
 
   // The cover overlays the app (position: fixed) and slides away on exit.
   // The app stays mounted underneath the whole time, so nothing remounts
@@ -151,8 +195,8 @@ function App() {
       <SessionPicker
         year={year} onYear={setYear}
         events={events} round={round} onRound={setRound} eventsLoading={eventsLoading}
-        drivers={drivers} driver={driver} onDriver={setDriver} driversLoading={driversLoading}
-        onAnalyze={analyze} analyzing={loading}
+        drivers={drivers} selected={selected} onToggleDriver={toggleDriver} driversLoading={driversLoading}
+        onAnalyze={analyze} analyzing={loading} analyzeLabel={analyzeLabel}
       />
 
       {slow && (
@@ -163,7 +207,7 @@ function App() {
       )}
       {error && <div className="notice error">{error}</div>}
 
-      {loading && !telemetry && (
+      {loading && !laps && (
         <div>
           <div className="skeleton" style={{ height: 64 }} />
           <div className="skeleton" style={{ height: 220 }} />
@@ -172,38 +216,69 @@ function App() {
         </div>
       )}
 
-      {telemetry && (
+      {laps && (
         <>
           <div className="cards">
-            <div className="card">
-              <div className="label">
-                <span className="swatch" style={{ background: color }} />
-                {loadedDriver?.name ?? telemetry.driver}
+            {laps.map((lap, i) => (
+              <div className="card" key={lap.driver}>
+                <div className="label">
+                  <span
+                    className="swatch"
+                    style={{ background: lap.info?.color ?? "#888" }}
+                  />
+                  {lap.info?.name ?? lap.driver}
+                  {laps.length === 2 && <span className="slot-tag">{i === 0 ? "A" : "B"}</span>}
+                </div>
+                <div className="value">{lap.lap_time}</div>
+                <div className="sub">
+                  {lap.info?.team} · top {Math.round(Math.max(...lap.telemetry.map((p) => p.Speed)))} km/h
+                </div>
               </div>
-              <div className="sub">{loadedDriver?.team}</div>
-            </div>
-            <div className="card">
-              <div className="label">Fastest lap</div>
-              <div className="value">{telemetry.lap_time}</div>
-            </div>
-            <div className="card">
-              <div className="label">Top speed</div>
-              <div className="value">{Math.round(topSpeed)} km/h</div>
-            </div>
+            ))}
+            {gap != null && (
+              <div className="card">
+                <div className="label">Gap (B to A)</div>
+                <div className="value">{gap >= 0 ? "+" : "−"}{Math.abs(gap).toFixed(3)}s</div>
+                <div className="sub">{laps[gap >= 0 ? 0 : 1].driver} ahead</div>
+              </div>
+            )}
           </div>
 
           <div className="charts">
-            <h2>{eventName} — qualifying telemetry</h2>
+            <div className="charts-head">
+              <h2>{eventName} — qualifying telemetry</h2>
+              <div className="legend">
+                {laps.map((lap, i) => {
+                  const c = lap.info?.color ?? "#888";
+                  return (
+                    <span className="legend-chip" key={lap.driver}>
+                      <span
+                        className="legend-line"
+                        style={{
+                          // teammate case: B is dashed in the charts, mirror it here
+                          background:
+                            i === 1 && sameColor
+                              ? `repeating-linear-gradient(90deg, ${c} 0 5px, transparent 5px 9px)`
+                              : c,
+                        }}
+                      />
+                      {lap.driver}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
             {channels.map((ch) => (
-              <ChannelChart key={ch.title} xMax={lapLength} color={color} {...ch} />
+              <ChannelChart key={ch.title} xMax={lapLength} {...ch} />
             ))}
           </div>
         </>
       )}
 
-      {!telemetry && !loading && (
+      {!laps && !loading && (
         <div className="empty">
-          Pick a season, race, and driver — then analyze their fastest qualifying lap.
+          Pick a season, a race, and one or two drivers — then analyze their
+          fastest qualifying laps head-to-head.
         </div>
       )}
     </div>
