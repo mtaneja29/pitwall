@@ -29,8 +29,8 @@ function ChannelChart({ title, series, xMax, stepped = false, showX = false, hei
     })),
   };
 
-  const grid = { color: "rgba(255,255,255,0.05)" };
-  const ticks = { color: "#63605b", font: { size: 11, family: "'JetBrains Mono', monospace" } };
+  const grid = { color: "rgba(164,190,255,0.06)" };
+  const ticks = { color: "#565e73", font: { size: 10, family: "'B612 Mono', monospace" } };
 
   const options = {
     responsive: true,
@@ -40,11 +40,11 @@ function ChannelChart({ title, series, xMax, stepped = false, showX = false, hei
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: "rgba(19,19,23,0.95)",
-        borderColor: "#28282f",
+        backgroundColor: "rgba(11,13,23,0.95)",
+        borderColor: "#1c2134",
         borderWidth: 1,
-        titleFont: { family: "'JetBrains Mono', monospace", size: 11 },
-        bodyFont: { family: "'JetBrains Mono', monospace", size: 12 },
+        titleFont: { family: "'B612 Mono', monospace", size: 10 },
+        bodyFont: { family: "'B612 Mono', monospace", size: 11 },
         callbacks: {
           title: (items) => `${Math.round(items[0].parsed.x)} m`,
           label: (item) => ` ${item.dataset.label}: ${item.parsed.y.toFixed(zeroLine ? 3 : 1)}`,
@@ -58,14 +58,14 @@ function ChannelChart({ title, series, xMax, stepped = false, showX = false, hei
         max: xMax,
         grid,
         ticks: { ...ticks, display: showX, callback: (v) => Math.round(v).toLocaleString() },
-        title: { display: showX, text: "Distance (m)", color: "#9a968e", font: { size: 11 } },
+        title: { display: showX, text: "Distance (m)", color: "#8b93a8", font: { size: 11 } },
       },
       y: {
         grid: zeroLine
-          ? { color: (ctx) => (ctx.tick.value === 0 ? "rgba(242,240,235,0.35)" : "rgba(255,255,255,0.05)") }
+          ? { color: (ctx) => (ctx.tick.value === 0 ? "rgba(233,237,246,0.35)" : "rgba(164,190,255,0.06)") }
           : grid,
         ticks,
-        title: { display: true, text: title, color: "#9a968e", font: { size: 11 } },
+        title: { display: true, text: title, color: "#8b93a8", font: { size: 11 } },
         // Force every chart's y-axis to the same width so the plot areas
         // line up vertically — otherwise "320" (speed) is wider than "1" (brake).
         afterFit: (scale) => {

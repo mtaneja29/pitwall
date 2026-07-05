@@ -255,7 +255,11 @@ function App() {
                   {lap.qualiPos > 0 && <span className="pos-tag">P{lap.qualiPos}</span>}
                   {laps.length === 2 && <span className="slot-tag">{i === 0 ? "A" : "B"}</span>}
                 </div>
-                <div className="value">{lap.lap_time}</div>
+                {/* FIA timing convention: purple = fastest. With two laps
+                    loaded, the quicker one gets the purple time. */}
+                <div className={`value${gap != null && (gap >= 0 ? 0 : 1) === i ? " fastest" : ""}`}>
+                  {lap.lap_time}
+                </div>
                 <div className="sub">
                   {lap.info?.team} · top {Math.round(Math.max(...lap.telemetry.map((p) => p.Speed)))} km/h
                 </div>
@@ -308,7 +312,7 @@ function App() {
           <svg width="220" height="40" viewBox="0 0 220 40" aria-hidden="true">
             <path
               d="M0 32 L30 32 L45 10 L70 10 L82 30 L110 30 L122 8 L150 8 L165 28 L200 28 L220 12"
-              fill="none" stroke="#63605b" strokeWidth="1.5" strokeLinejoin="round"
+              fill="none" stroke="#565e73" strokeWidth="1.5" strokeLinejoin="round"
             />
           </svg>
           Pick a season, a race, and one or two drivers — then analyze their

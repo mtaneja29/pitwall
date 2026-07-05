@@ -1,21 +1,36 @@
-/* PitWall design system — carbon black + F1 red, defined once as CSS
-   variables so every component pulls from the same palette. */
+/* PitWall design system — "night race timing tower".
+   Deep blue-black under floodlights; the FIA timing palette does the
+   talking: purple = fastest, green = personal best, F1 red kept for the
+   brand and the kerbs. Defined once as CSS variables so every component
+   pulls from the same palette. */
 :root {
-  --bg: #0b0b0d;          /* page — carbon */
-  --panel: #131317;       /* cards, pickers */
-  --panel-2: #1c1c22;     /* inputs, chips, hover states */
-  --border: #28282f;
-  --text: #f2f0eb;        /* warm white */
-  --dim: #9a968e;         /* secondary text */
-  --faint: #63605b;       /* hints, axis labels */
-  --red: #e10600;         /* F1 red — accent */
-  --red-soft: #ff9d97;    /* red-tinted text on dark */
-  --ok: #3fd68c;
-  --warn: #f5b944;
+  --bg: #05060c;          /* page — night-race black, blue undertone */
+  --panel: #0b0d17;       /* cards, pickers */
+  --panel-2: #131627;     /* inputs, chips, hover states */
+  --border: #1c2134;
+  --text: #e9edf6;        /* floodlight white */
+  --dim: #8b93a8;         /* secondary text */
+  --faint: #565e73;       /* hints, axis labels */
+  --red: #e10600;         /* F1 red — brand + kerbs */
+  --red-soft: #ff958f;    /* red-tinted text on dark */
+  --purple: #c04df9;      /* timing purple — fastest */
+  --ok: #2ee6a8;          /* timing green — personal best */
+  --warn: #ffd23f;
   --danger: #ff6b60;
 
-  --sans: 'Inter', system-ui, 'Segoe UI', sans-serif;
-  --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+  /* Titillium Web: F1's long-time web face. B612 Mono: designed by Airbus
+     for cockpit instruments — every number here is timing data, so it gets
+     an instrument font. Michroma: wide technical display for headings. */
+  --sans: 'Titillium Web', system-ui, sans-serif;
+  --mono: 'B612 Mono', ui-monospace, Consolas, monospace;
+  --display: 'Michroma', sans-serif;
+
+  /* red/white kerb stripe, used as panel accents */
+  --kerb: repeating-linear-gradient(
+    -45deg,
+    var(--red) 0 8px,
+    #e9edf6 8px 16px
+  );
 
   color-scheme: dark;
 }
@@ -26,10 +41,13 @@
 
 body {
   margin: 0;
-  /* faint red glow bleeding in from the top — reads as "stage lighting"
-     without ever competing with the data */
+  /* layered night-race atmosphere: cool floodlight cone from above, a hint
+     of track-side sodium warmth at the horizon, and ultra-faint scanlines
+     like a trackside timing monitor — all CSS, no images */
   background:
-    radial-gradient(900px 380px at 50% -120px, rgba(225, 6, 0, 0.08), transparent 70%),
+    repeating-linear-gradient(0deg, rgba(233, 237, 246, 0.012) 0 1px, transparent 1px 4px),
+    radial-gradient(1100px 480px at 50% -160px, rgba(164, 190, 255, 0.10), transparent 70%),
+    radial-gradient(900px 300px at 85% 110%, rgba(225, 6, 0, 0.05), transparent 70%),
     var(--bg);
   color: var(--text);
   font: 15px/1.5 var(--sans);
@@ -77,19 +95,20 @@ button {
 }
 
 .wordmark {
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 3px;
+  font-family: var(--display);
+  font-size: 16px;
+  letter-spacing: 2px;
 }
 
 .wordmark .bar {
   color: var(--red);
 }
 
+/* Michroma is naturally wide — smaller sizes than a grotesque would need */
 .wordmark.xl {
-  font-size: clamp(52px, 9vw, 88px);
-  letter-spacing: 8px;
-  line-height: 1.1;
+  font-size: clamp(34px, 6.5vw, 60px);
+  letter-spacing: 6px;
+  line-height: 1.15;
 }
 
 .tagline {
@@ -108,9 +127,12 @@ button {
   background: var(--red);
   color: #fff;
   border: none;
-  border-radius: 10px;
-  padding: 13px 34px;
-  font: 600 15px var(--sans);
+  border-radius: 0;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%);
+  padding: 15px 36px;
+  font: 400 12px var(--display);
+  text-transform: uppercase;
+  letter-spacing: 2px;
   cursor: pointer;
   transition: background 0.15s, transform 0.15s;
 }
@@ -123,6 +145,72 @@ button {
 .cover .api-status {
   justify-content: center;
   margin-top: 22px;
+}
+
+/* ---------- start-light gantry ---------- */
+.startlights {
+  display: flex;
+  gap: 13px;
+  justify-content: center;
+  width: max-content;
+  margin: 0 auto 30px;
+  padding: 11px 16px;
+  background: #07080f;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  /* hanging from the top of the screen like the real gantry */
+  position: relative;
+}
+
+.startlights::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  width: 2px;
+  height: 48px;
+  background: var(--border);
+}
+
+.light {
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  background: #14060a;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8);
+}
+
+/* The start sequence, all CSS: each light snaps on 250ms after the last
+   (step-end = bulbs don't fade, they switch), holds, then every light cuts
+   out together at 1.5s. The later `lightsOut` animation wins the cascade.
+   JS only schedules the page transition to match. */
+.cover.launching .light {
+  animation:
+    lightOn 0.01s step-end forwards calc(var(--i) * 0.25s),
+    lightsOut 0.01s step-end forwards 1.5s;
+}
+
+@keyframes lightOn {
+  to {
+    background: var(--red);
+    box-shadow:
+      0 0 16px rgba(225, 6, 0, 0.9),
+      0 0 42px rgba(225, 6, 0, 0.45),
+      inset 0 -2px 5px rgba(0, 0, 0, 0.35);
+  }
+}
+
+@keyframes lightsOut {
+  to {
+    background: #14060a;
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8);
+  }
+}
+
+.enter:disabled {
+  cursor: default;
+  opacity: 0.85;
+  transform: none;
 }
 
 /* staggered entrance for cover content */
@@ -181,7 +269,7 @@ button {
 .tab {
   font-size: 13px;
   padding: 4px 12px;
-  border-radius: 999px;
+  border-radius: 2px;
   color: var(--dim);
 }
 
@@ -215,19 +303,34 @@ button {
 
 /* ---------- session picker ---------- */
 .picker {
+  position: relative;
+  overflow: hidden;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 16px 18px;
+  border-radius: 3px;
+  padding: 18px 18px 16px;
   margin-bottom: 20px;
 }
 
+/* kerb stripe along the panel top — the app's signature edge */
+.picker::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--kerb);
+  opacity: 0.85;
+}
+
 .picker-label {
-  font-size: 11px;
+  font-family: var(--display);
+  font-size: 9px;
   text-transform: uppercase;
-  letter-spacing: 1.2px;
+  letter-spacing: 2px;
   color: var(--faint);
-  margin: 14px 0 8px;
+  margin: 16px 0 8px;
 }
 
 .picker-label:first-child {
@@ -235,9 +338,10 @@ button {
 }
 
 .picker-label .hint {
+  font-family: var(--sans);
   text-transform: none;
   letter-spacing: 0;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--faint);
   font-weight: 400;
 }
@@ -251,16 +355,16 @@ button {
 .pill {
   background: transparent;
   border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 6px 15px;
-  font: 500 13px var(--mono);
+  border-radius: 2px;
+  padding: 6px 14px;
+  font: 400 13px var(--mono);
   color: var(--dim);
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
 
 .pill:hover {
-  border-color: #3c3c45;
+  border-color: #2e3650;
   color: var(--text);
 }
 
@@ -286,7 +390,7 @@ button {
   flex: 0 0 auto;
   background: var(--panel-2);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 2px;
   padding: 7px 14px;
   text-align: left;
   cursor: pointer;
@@ -294,7 +398,7 @@ button {
 }
 
 .race-chip:hover {
-  border-color: #3c3c45;
+  border-color: #2e3650;
   transform: translateY(-2px);
 }
 
@@ -335,7 +439,7 @@ button {
   position: relative;
   background: var(--panel-2);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 2px;
   padding: 8px 10px 8px 16px;
   text-align: left;
   cursor: pointer;
@@ -375,7 +479,7 @@ button {
   font: 700 10px var(--mono);
   color: var(--text);
   background: color-mix(in srgb, var(--team) 45%, var(--panel-2));
-  border-radius: 5px;
+  border-radius: 2px;
   padding: 1px 6px;
 }
 
@@ -411,9 +515,12 @@ button {
   background: var(--red);
   color: #fff;
   border: none;
-  border-radius: 9px;
-  padding: 10px 28px;
-  font: 600 14px var(--sans);
+  border-radius: 0;
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+  padding: 11px 26px;
+  font: 400 11px var(--display);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
   cursor: pointer;
   transition: background 0.15s, transform 0.15s;
 }
@@ -452,7 +559,7 @@ button {
 .trackmap {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 3px;
   padding: 12px 16px 10px;
   animation: fadeUp 0.45s ease both;
 }
@@ -473,9 +580,10 @@ button {
 }
 
 .trackmap-title {
-  font-size: 11px;
+  font-family: var(--display);
+  font-size: 9px;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
   color: var(--faint);
 }
 
@@ -503,7 +611,7 @@ button {
 .card {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 3px;
   padding: 12px 16px;
   animation: fadeUp 0.45s ease both;
 }
@@ -512,7 +620,7 @@ button {
 .card:nth-child(3) { animation-delay: 0.16s; }
 
 .card .label {
-  font-size: 11px;
+  font-size: 10.5px;
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--faint);
@@ -523,8 +631,15 @@ button {
 }
 
 .card .value {
-  font: 600 22px var(--mono);
+  font: 700 21px var(--mono);
   margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* FIA timing purple — the faster of the two compared laps */
+.card .value.fastest {
+  color: var(--purple);
+  text-shadow: 0 0 18px rgba(192, 77, 249, 0.35);
 }
 
 .card .sub {
@@ -535,13 +650,13 @@ button {
 .swatch {
   width: 9px;
   height: 9px;
-  border-radius: 2px;
+  border-radius: 1px;
   display: inline-block;
 }
 
 .notice {
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 3px;
   padding: 12px 16px;
   font-size: 13px;
   color: var(--dim);
@@ -559,27 +674,28 @@ button {
   overflow: hidden;
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 3px;
   padding: 18px 18px 10px;
   animation: fadeUp 0.5s ease both 0.12s;
 }
 
-/* thin racing stripe along the top of the telemetry panel */
+/* kerb stripe along the top of the telemetry panel */
 .charts::before {
   content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, var(--red), rgba(225, 6, 0, 0) 65%);
+  height: 3px;
+  background: var(--kerb);
+  opacity: 0.85;
 }
 
 .lap-len {
-  font: 600 12px var(--mono);
+  font: 400 12px var(--mono);
   color: var(--faint);
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 2px;
   padding: 2px 10px;
 }
 
@@ -593,9 +709,10 @@ button {
 }
 
 .charts h2 {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 1px;
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
   color: var(--dim);
   margin: 0;
@@ -625,7 +742,7 @@ button {
   font: 700 10px var(--mono);
   color: var(--faint);
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: 2px;
   padding: 0 5px;
 }
 
@@ -634,7 +751,7 @@ button {
   font: 700 10px var(--mono);
   color: var(--red-soft);
   background: rgba(225, 6, 0, 0.12);
-  border-radius: 5px;
+  border-radius: 2px;
   padding: 1px 6px;
 }
 
@@ -645,7 +762,7 @@ button {
 }
 
 .skeleton {
-  border-radius: 10px;
+  border-radius: 3px;
   background: var(--panel-2);
   animation: pulse 1.4s ease-in-out infinite;
   margin-bottom: 12px;
