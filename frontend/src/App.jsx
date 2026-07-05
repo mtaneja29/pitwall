@@ -9,6 +9,7 @@ import {
 } from "chart.js";
 import { ping, fetchSchedule, fetchDrivers, fetchTelemetry } from "./api";
 import { crosshairSync } from "./crosshairSync";
+import { computeDelta } from "./delta";
 import Header from "./components/Header";
 import Cover from "./components/Cover";
 import SessionPicker from "./components/SessionPicker";
@@ -164,6 +165,19 @@ function App() {
 
   const channels = laps && [
     { title: "Speed (km/h)", series: channelSeries((p) => p.Speed), height: 220, fill: laps.length === 1 },
+    // delta only exists when there are two laps to compare
+    ...(laps.length === 2
+      ? [{
+          title: `Δ ${laps[1].driver} to ${laps[0].driver} (s)`,
+          series: [{
+            label: `Δ ${laps[1].driver}`,
+            color: sameColor ? "#f2f0eb" : laps[1].info?.color ?? "#f2f0eb",
+            points: computeDelta(laps[0].telemetry, laps[1].telemetry),
+          }],
+          height: 130,
+          zeroLine: true,
+        }]
+      : []),
     { title: "Throttle (%)", series: channelSeries((p) => p.Throttle), height: 110 },
     { title: "Brake", series: channelSeries((p) => Number(p.Brake)), height: 90, stepped: true },
     { title: "Gear", series: channelSeries((p) => p.nGear), height: 110, stepped: true, showX: true },
