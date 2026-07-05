@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+import gc
 import os
 import threading
 import uvicorn
@@ -107,11 +108,17 @@ def get_telemetry(year: int, round: int, driver: str):
     tel["Time"] = tel["Time"].dt.total_seconds()
     data = tel[["Distance", "Speed", "Throttle", "Brake", "nGear", "X", "Y", "Time"]].dropna()
     data = data.round({"Distance": 1, "Speed": 1, "X": 0, "Y": 0, "Time": 3})
-    return {
+    result = {
         "driver": driver,
         "lap_time": format_lap_time(lap["LapTime"]),
         "telemetry": data.to_dict(orient="records"),
     }
+    # A full session is hundreds of MB of DataFrames; on a 512MB instance we
+    # want that memory back the moment the response is built, not whenever
+    # Python gets around to it.
+    del session, lap, tel, data
+    gc.collect()
+    return result
 
 
 if __name__ == "__main__":
