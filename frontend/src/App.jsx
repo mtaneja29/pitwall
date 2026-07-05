@@ -45,6 +45,8 @@ function App() {
   const [round, setRound] = useState(null);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [drivers, setDrivers] = useState([]);
+  // Session within the race weekend (Q by default; sprint weekends add more)
+  const [sessionType, setSessionType] = useState("Q");
   // Up to two driver codes; order matters — [0] is the baseline (A), [1] the
   // comparison (B). One selected = classic single-driver view.
   const [selected, setSelected] = useState([]);
@@ -53,6 +55,7 @@ function App() {
   // Loaded laps: [{driver, lap_time, telemetry, info}] — 1 or 2 entries.
   // Kept separate from `selected`, which the user may change afterwards.
   const [laps, setLaps] = useState(null);
+  const [loadedMeta, setLoadedMeta] = useState(null); // {eventName, sessionName} at load time
   const [loading, setLoading] = useState(false);
   const [loadingCode, setLoadingCode] = useState(null); // which driver is fetching now
   const [error, setError] = useState(null);
@@ -66,11 +69,26 @@ function App() {
       .catch(() => setApiStatus("down"));
   }, []);
 
+  // The stored session pick may not exist for the selected weekend (chose
+  // Sprint in China, then clicked Bahrain). Derive the effective session at
+  // render rather than clamping state in an effect — the preference
+  // survives, so switching back to a sprint weekend restores it.
+  const availableSessions = events.find((e) => e.round === round)?.sessions ?? [];
+  const effectiveSession = (
+    availableSessions.length ? availableSessions.map((s) => s.code) : ["Q"]
+  ).includes(sessionType)
+    ? sessionType
+    : "Q";
+
   // Year changed -> reload race list, keep first race selected.
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- fetch-on-param-change
+       with a loading flag; the synchronous reset before the request is the
+       point, not an accident */
     setEventsLoading(true);
     setEvents([]);
     setRound(null);
+    /* eslint-enable react-hooks/set-state-in-effect */
     fetchSchedule(year)
       .then((d) => {
         setEvents(d.events);
@@ -81,21 +99,24 @@ function App() {
       .finally(() => setEventsLoading(false));
   }, [year]);
 
-  // Race changed -> reload driver list. Keep selected drivers that also took
-  // part in the newly chosen race (nice when comparing races).
+  // Race or session changed -> reload the driver classification. Keep
+  // selected drivers that also took part (nice when comparing sessions).
   useEffect(() => {
     if (round == null) return;
+    /* eslint-disable react-hooks/set-state-in-effect -- same fetch-on-change
+       pattern as above */
     setDriversLoading(true);
     setDrivers([]);
-    fetchDrivers(year, round)
+    /* eslint-enable react-hooks/set-state-in-effect */
+    fetchDrivers(year, round, effectiveSession)
       .then((d) => {
         setDrivers(d.drivers);
         setSelected((prev) => prev.filter((c) => d.drivers.some((x) => x.code === c)));
       })
-      .catch(() => setError("Couldn't load drivers for that race."))
+      .catch(() => setError("Couldn't load drivers for that session."))
       .finally(() => setDriversLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [round]);
+  }, [round, effectiveSession]);
 
   // Click a driver card: toggle off if selected; add if there's room;
   // otherwise swap out the comparison slot and keep the baseline.
@@ -124,7 +145,7 @@ function App() {
       const results = [];
       for (const code of selected) {
         setLoadingCode(code);
-        const data = await fetchTelemetry(year, round, code);
+        const data = await fetchTelemetry(year, round, code, effectiveSession);
         results.push({
           ...data,
           info: drivers.find((d) => d.code === code) ?? null,
@@ -133,6 +154,11 @@ function App() {
         });
       }
       setLaps(results);
+      const ev = events.find((e) => e.round === round);
+      setLoadedMeta({
+        eventName: ev?.name ?? "",
+        sessionName: ev?.sessions?.find((s) => s.code === effectiveSession)?.name ?? "Qualifying",
+      });
       setApiStatus("live");
     } catch (err) {
       // "Failed to fetch" here usually means the free-tier proxy dropped the
@@ -216,9 +242,11 @@ function App() {
       <SessionPicker
         year={year} onYear={setYear}
         events={events} round={round} onRound={setRound} eventsLoading={eventsLoading}
+        sessions={availableSessions}
+        sessionType={effectiveSession} onSession={setSessionType}
         drivers={drivers} selected={selected} onToggleDriver={toggleDriver} driversLoading={driversLoading}
         onAnalyze={analyze} analyzing={loading} analyzeLabel={analyzeLabel}
-        summary={eventName ? `${eventName.replace(" Grand Prix", "")} ${year}` : ""}
+        summary={eventName ? `${eventName.replace(" Grand Prix", "")} ${year} · ${effectiveSession}` : ""}
       />
 
       {slow && (
@@ -243,41 +271,59 @@ function App() {
         <>
           <div className="overview">
             <TrackMap points={laps[0].telemetry} label={laps[0].driver} />
-          <div className="cards">
-            {laps.map((lap, i) => (
-              <div className="card" key={lap.driver}>
-                <div className="label">
-                  <span
-                    className="swatch"
-                    style={{ background: lap.info?.color ?? "#888" }}
-                  />
-                  {lap.info?.name ?? lap.driver}
-                  {lap.qualiPos > 0 && <span className="pos-tag">P{lap.qualiPos}</span>}
-                  {laps.length === 2 && <span className="slot-tag">{i === 0 ? "A" : "B"}</span>}
-                </div>
-                {/* FIA timing convention: purple = fastest. With two laps
-                    loaded, the quicker one gets the purple time. */}
-                <div className={`value${gap != null && (gap >= 0 ? 0 : 1) === i ? " fastest" : ""}`}>
-                  {lap.lap_time}
-                </div>
-                <div className="sub">
-                  {lap.info?.team} · top {Math.round(Math.max(...lap.telemetry.map((p) => p.Speed)))} km/h
-                </div>
+
+            {/* classification strip, timing-tower style: fastest lap first,
+                purple time per FIA convention */}
+            <div className="results">
+              <div className="results-title">
+                {loadedMeta?.eventName} · {loadedMeta?.sessionName}
               </div>
-            ))}
-            {gap != null && (
-              <div className="card">
-                <div className="label">Gap (B to A)</div>
-                <div className="value">{gap >= 0 ? "+" : "−"}{Math.abs(gap).toFixed(3)}s</div>
-                <div className="sub">{laps[gap >= 0 ? 0 : 1].driver} ahead</div>
-              </div>
-            )}
-          </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Pos</th>
+                    <th>Driver</th>
+                    <th>Team</th>
+                    <th>Lap time</th>
+                    <th>Top speed</th>
+                    <th>Gap</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...laps]
+                    .map((lap, i) => ({ lap, slot: i }))
+                    .sort((a, b) => lapSeconds(a.lap.lap_time) - lapSeconds(b.lap.lap_time))
+                    .map(({ lap, slot }, row) => (
+                      <tr key={lap.driver}>
+                        <td className="pos">{lap.qualiPos > 0 ? `P${lap.qualiPos}` : "—"}</td>
+                        <td className="drv">
+                          <span className="teambar" style={{ background: lap.info?.color ?? "#888" }} />
+                          <b>{lap.driver}</b>
+                          <span className="dname">{lap.info?.name}</span>
+                          {laps.length === 2 && (
+                            <span className="slot-tag">{slot === 0 ? "A" : "B"}</span>
+                          )}
+                        </td>
+                        <td className="team">{lap.info?.team}</td>
+                        <td className={`time${laps.length === 2 && row === 0 ? " fastest" : ""}`}>
+                          {lap.lap_time}
+                        </td>
+                        <td className="spd">
+                          {Math.round(Math.max(...lap.telemetry.map((p) => p.Speed)))} km/h
+                        </td>
+                        <td className="gapc">
+                          {row === 0 ? "—" : `+${Math.abs(gap).toFixed(3)}`}
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div className="charts">
             <div className="charts-head">
-              <h2>{eventName} — qualifying telemetry</h2>
+              <h2>{loadedMeta?.sessionName ?? "Session"} telemetry — fastest laps</h2>
               <div className="legend">
                 <span className="lap-len">{(lapLength / 1000).toFixed(3)} km</span>
                 {laps.map((lap, i) => {

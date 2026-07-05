@@ -3,9 +3,16 @@
 // Still fully controlled: App owns the state, this renders it.
 const YEARS = [2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019];
 
+// short labels for the session pills; full name goes in the tooltip
+const SESSION_LABELS = {
+  FP1: "FP1", FP2: "FP2", FP3: "FP3",
+  SQ: "Sprint Quali", S: "Sprint", Q: "Qualifying", R: "Race",
+};
+
 function SessionPicker({
   year, onYear,
   events, round, onRound, eventsLoading,
+  sessions, sessionType, onSession,
   drivers, selected, onToggleDriver, driversLoading,
   onAnalyze, analyzing, analyzeLabel, summary,
 }) {
@@ -39,6 +46,20 @@ function SessionPicker({
               </span>
             </span>
             <span className="rname">{ev.name.replace(" Grand Prix", "")}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="picker-label">Session</div>
+      <div className="pills">
+        {(sessions.length ? sessions : [{ code: "Q", name: "Qualifying" }]).map((s) => (
+          <button
+            key={s.code}
+            className={`pill${s.code === sessionType ? " sel" : ""}`}
+            title={s.name}
+            onClick={() => onSession(s.code)}
+          >
+            {SESSION_LABELS[s.code] ?? s.code}
           </button>
         ))}
       </div>

@@ -10,9 +10,10 @@ async function getJSON(path) {
 
 export const ping = () => getJSON("/");
 export const fetchSchedule = (year) => getJSON(`/schedule?year=${year}`);
-export const fetchDrivers = (year, round) => getJSON(`/drivers?year=${year}&round=${round}`);
-export async function fetchTelemetry(year, round, driver) {
-  const path = `/telemetry?year=${year}&round=${round}&driver=${driver}`;
+export const fetchDrivers = (year, round, session) =>
+  getJSON(`/drivers?year=${year}&round=${round}&session=${session}`);
+export async function fetchTelemetry(year, round, driver, session) {
+  const path = `/telemetry?year=${year}&round=${round}&driver=${driver}&session=${session}`;
   try {
     return await getJSON(path);
   } catch (err) {
