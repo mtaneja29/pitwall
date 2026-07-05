@@ -7,7 +7,7 @@ function SessionPicker({
   year, onYear,
   events, round, onRound, eventsLoading,
   drivers, selected, onToggleDriver, driversLoading,
-  onAnalyze, analyzing, analyzeLabel,
+  onAnalyze, analyzing, analyzeLabel, summary,
 }) {
   return (
     <div className="picker">
@@ -32,7 +32,12 @@ function SessionPicker({
             className={`race-chip${ev.round === round ? " sel" : ""}`}
             onClick={() => onRound(ev.round)}
           >
-            <span className="round">R{ev.round}</span>
+            <span className="round">
+              R{ev.round}{" "}
+              <span className="rdate">
+                · {new Date(ev.date).toLocaleDateString("en", { month: "short", day: "numeric" })}
+              </span>
+            </span>
             <span className="rname">{ev.name.replace(" Grand Prix", "")}</span>
           </button>
         ))}
@@ -64,6 +69,15 @@ function SessionPicker({
       </div>
 
       <div className="picker-footer">
+        <span className="selection-summary">
+          {selected.length > 0 && (
+            <>
+              {selected[0]}
+              {selected[1] && <><span className="vs"> vs </span>{selected[1]}</>}
+              {summary && ` — ${summary}`}
+            </>
+          )}
+        </span>
         <button className="analyze" onClick={onAnalyze} disabled={analyzing || selected.length === 0}>
           {analyzeLabel}
         </button>

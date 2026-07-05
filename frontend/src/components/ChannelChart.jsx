@@ -57,7 +57,7 @@ function ChannelChart({ title, series, xMax, stepped = false, showX = false, hei
         min: 0,
         max: xMax,
         grid,
-        ticks: { ...ticks, display: showX },
+        ticks: { ...ticks, display: showX, callback: (v) => Math.round(v).toLocaleString() },
         title: { display: showX, text: "Distance (m)", color: "#9a968e", font: { size: 11 } },
       },
       y: {

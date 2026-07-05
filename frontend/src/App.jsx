@@ -125,7 +125,12 @@ function App() {
       for (const code of selected) {
         setLoadingCode(code);
         const data = await fetchTelemetry(year, round, code);
-        results.push({ ...data, info: drivers.find((d) => d.code === code) ?? null });
+        results.push({
+          ...data,
+          info: drivers.find((d) => d.code === code) ?? null,
+          // /drivers returns quali classification order, so index = position
+          qualiPos: drivers.findIndex((d) => d.code === code) + 1,
+        });
       }
       setLaps(results);
       setApiStatus("live");
@@ -213,6 +218,7 @@ function App() {
         events={events} round={round} onRound={setRound} eventsLoading={eventsLoading}
         drivers={drivers} selected={selected} onToggleDriver={toggleDriver} driversLoading={driversLoading}
         onAnalyze={analyze} analyzing={loading} analyzeLabel={analyzeLabel}
+        summary={eventName ? `${eventName.replace(" Grand Prix", "")} ${year}` : ""}
       />
 
       {slow && (
@@ -227,6 +233,7 @@ function App() {
         <div>
           <div className="skeleton" style={{ height: 64 }} />
           <div className="skeleton" style={{ height: 220 }} />
+          <div className="skeleton" style={{ height: 130 }} />
           <div className="skeleton" style={{ height: 110 }} />
           <div className="skeleton" style={{ height: 90 }} />
         </div>
@@ -245,6 +252,7 @@ function App() {
                     style={{ background: lap.info?.color ?? "#888" }}
                   />
                   {lap.info?.name ?? lap.driver}
+                  {lap.qualiPos > 0 && <span className="pos-tag">P{lap.qualiPos}</span>}
                   {laps.length === 2 && <span className="slot-tag">{i === 0 ? "A" : "B"}</span>}
                 </div>
                 <div className="value">{lap.lap_time}</div>
@@ -267,6 +275,7 @@ function App() {
             <div className="charts-head">
               <h2>{eventName} — qualifying telemetry</h2>
               <div className="legend">
+                <span className="lap-len">{(lapLength / 1000).toFixed(3)} km</span>
                 {laps.map((lap, i) => {
                   const c = lap.info?.color ?? "#888";
                   return (
@@ -296,6 +305,12 @@ function App() {
 
       {!laps && !loading && (
         <div className="empty">
+          <svg width="220" height="40" viewBox="0 0 220 40" aria-hidden="true">
+            <path
+              d="M0 32 L30 32 L45 10 L70 10 L82 30 L110 30 L122 8 L150 8 L165 28 L200 28 L220 12"
+              fill="none" stroke="#63605b" strokeWidth="1.5" strokeLinejoin="round"
+            />
+          </svg>
           Pick a season, a race, and one or two drivers — then analyze their
           fastest qualifying laps head-to-head.
         </div>

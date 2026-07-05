@@ -26,7 +26,11 @@
 
 body {
   margin: 0;
-  background: var(--bg);
+  /* faint red glow bleeding in from the top — reads as "stage lighting"
+     without ever competing with the data */
+  background:
+    radial-gradient(900px 380px at 50% -120px, rgba(225, 6, 0, 0.08), transparent 70%),
+    var(--bg);
   color: var(--text);
   font: 15px/1.5 var(--sans);
   -webkit-font-smoothing: antialiased;
@@ -306,6 +310,13 @@ button {
   letter-spacing: 1px;
 }
 
+.race-chip .rdate {
+  color: var(--faint);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
 .race-chip .rname {
   font-size: 13px;
   font-weight: 500;
@@ -333,7 +344,8 @@ button {
 }
 
 .driver-card:hover {
-  border-color: #3c3c45;
+  /* preview the team color before selection */
+  border-color: color-mix(in srgb, var(--team) 55%, var(--border));
   transform: translateY(-2px);
 }
 
@@ -377,8 +389,22 @@ button {
 
 .picker-footer {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-top: 16px;
+}
+
+/* "VER vs LEC — Bahrain 2024" readback next to the button */
+.selection-summary {
+  font: 600 12px var(--mono);
+  color: var(--dim);
+  letter-spacing: 0.5px;
+  min-height: 1em;
+}
+
+.selection-summary .vs {
+  color: var(--red-soft);
 }
 
 .analyze {
@@ -392,7 +418,11 @@ button {
   transition: background 0.15s, transform 0.15s;
 }
 
-.analyze:hover { background: #ff1e14; transform: translateY(-1px); }
+.analyze:hover {
+  background: #ff1e14;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(225, 6, 0, 0.35);
+}
 .analyze:disabled { opacity: 0.5; cursor: wait; transform: none; }
 
 /* ---------- info + states ---------- */
@@ -488,6 +518,7 @@ button {
   color: var(--faint);
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 7px;
 }
 
@@ -524,11 +555,32 @@ button {
 }
 
 .charts {
+  position: relative;
+  overflow: hidden;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 18px 18px 10px;
   animation: fadeUp 0.5s ease both 0.12s;
+}
+
+/* thin racing stripe along the top of the telemetry panel */
+.charts::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--red), rgba(225, 6, 0, 0) 65%);
+}
+
+.lap-len {
+  font: 600 12px var(--mono);
+  color: var(--faint);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 10px;
 }
 
 .charts-head {
@@ -575,6 +627,21 @@ button {
   border: 1px solid var(--border);
   border-radius: 5px;
   padding: 0 5px;
+}
+
+/* qualifying classification badge on the driver stat cards */
+.pos-tag {
+  font: 700 10px var(--mono);
+  color: var(--red-soft);
+  background: rgba(225, 6, 0, 0.12);
+  border-radius: 5px;
+  padding: 1px 6px;
+}
+
+.empty svg {
+  display: block;
+  margin: 0 auto 14px;
+  opacity: 0.5;
 }
 
 .skeleton {
