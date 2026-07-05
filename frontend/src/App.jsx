@@ -8,7 +8,8 @@ import {
 } from "chart.js";
 import { ping, fetchSchedule, fetchDrivers, fetchTelemetry } from "./api";
 import Header from "./components/Header";
-import ControlBar from "./components/ControlBar";
+import Cover from "./components/Cover";
+import SessionPicker from "./components/SessionPicker";
 import ChannelChart from "./components/ChannelChart";
 
 // Chart.js is modular — register only the pieces we use.
@@ -17,7 +18,17 @@ ChartJS.register(LineElement, PointElement, LinearScale, Tooltip);
 const DEFAULT_YEAR = 2024;
 
 function App() {
-  // Dropdown chain: year -> events (races) -> drivers. Each level's options
+  // Landing -> app transition: "cover" shows the landing page, "exiting"
+  // plays the slide-up animation with the app already rendered behind it,
+  // "app" unmounts the cover entirely.
+  const [stage, setStage] = useState("cover");
+
+  function enterApp() {
+    setStage("exiting");
+    setTimeout(() => setStage("app"), 700); // matches the CSS transition
+  }
+
+  // Selection chain: year -> events (races) -> drivers. Each level's options
   // are fetched when the level above changes.
   const [year, setYear] = useState(DEFAULT_YEAR);
   const [events, setEvents] = useState([]);
@@ -126,11 +137,18 @@ function App() {
   const topSpeed = telemetry && Math.max(...telemetry.telemetry.map((p) => p.Speed));
   const eventName = events.find((e) => e.round === round)?.name;
 
+  // The cover overlays the app (position: fixed) and slides away on exit.
+  // The app stays mounted underneath the whole time, so nothing remounts
+  // or refetches when the cover leaves.
   return (
+    <>
+      {stage !== "app" && (
+        <Cover exiting={stage === "exiting"} onEnter={enterApp} apiStatus={apiStatus} />
+      )}
     <div className="app">
       <Header apiStatus={apiStatus} />
 
-      <ControlBar
+      <SessionPicker
         year={year} onYear={setYear}
         events={events} round={round} onRound={setRound} eventsLoading={eventsLoading}
         drivers={drivers} driver={driver} onDriver={setDriver} driversLoading={driversLoading}
@@ -189,6 +207,7 @@ function App() {
         </div>
       )}
     </div>
+    </>
   );
 }
 

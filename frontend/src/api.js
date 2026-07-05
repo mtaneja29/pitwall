@@ -11,5 +11,16 @@ async function getJSON(path) {
 export const ping = () => getJSON("/");
 export const fetchSchedule = (year) => getJSON(`/schedule?year=${year}`);
 export const fetchDrivers = (year, round) => getJSON(`/drivers?year=${year}&round=${round}`);
-export const fetchTelemetry = (year, round, driver) =>
-  getJSON(`/telemetry?year=${year}&round=${round}&driver=${driver}`);
+export async function fetchTelemetry(year, round, driver) {
+  const path = `/telemetry?year=${year}&round=${round}&driver=${driver}`;
+  try {
+    return await getJSON(path);
+  } catch (err) {
+    // First-ever load of a race can outlive the proxy's ~100s window; the
+    // server finishes caching it anyway, so one automatic retry after a
+    // short pause usually succeeds without bothering the user.
+    if (err.message !== "Failed to fetch") throw err;
+    await new Promise((resolve) => setTimeout(resolve, 8000));
+    return getJSON(path);
+  }
+}

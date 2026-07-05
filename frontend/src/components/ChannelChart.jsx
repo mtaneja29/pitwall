@@ -26,7 +26,7 @@ function ChannelChart({ title, points, color, xMax, stepped = false, showX = fal
   };
 
   const grid = { color: "rgba(255,255,255,0.05)" };
-  const ticks = { color: "#5c6472", font: { size: 11, family: "'JetBrains Mono', monospace" } };
+  const ticks = { color: "#63605b", font: { size: 11, family: "'JetBrains Mono', monospace" } };
 
   const options = {
     responsive: true,
@@ -41,12 +41,12 @@ function ChannelChart({ title, points, color, xMax, stepped = false, showX = fal
         max: xMax,
         grid,
         ticks: { ...ticks, display: showX },
-        title: { display: showX, text: "Distance (m)", color: "#8b93a3", font: { size: 11 } },
+        title: { display: showX, text: "Distance (m)", color: "#9a968e", font: { size: 11 } },
       },
       y: {
         grid,
         ticks,
-        title: { display: true, text: title, color: "#8b93a3", font: { size: 11 } },
+        title: { display: true, text: title, color: "#9a968e", font: { size: 11 } },
         // Force every chart's y-axis to the same width so the plot areas
         // line up vertically — otherwise "320" (speed) is wider than "1" (brake).
         afterFit: (scale) => {
