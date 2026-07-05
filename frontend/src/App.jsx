@@ -13,6 +13,7 @@ import Header from "./components/Header";
 import Cover from "./components/Cover";
 import SessionPicker from "./components/SessionPicker";
 import ChannelChart from "./components/ChannelChart";
+import TrackMap from "./components/TrackMap";
 
 // Chart.js is modular — register only the pieces we use.
 ChartJS.register(LineElement, PointElement, LinearScale, Filler, Tooltip, crosshairSync);
@@ -219,6 +220,8 @@ function App() {
 
       {laps && (
         <>
+          <div className="overview">
+            <TrackMap points={laps[0].telemetry} label={laps[0].driver} />
           <div className="cards">
             {laps.map((lap, i) => (
               <div className="card" key={lap.driver}>
@@ -243,6 +246,7 @@ function App() {
                 <div className="sub">{laps[gap >= 0 ? 0 : 1].driver} ahead</div>
               </div>
             )}
+          </div>
           </div>
 
           <div className="charts">
