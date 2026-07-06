@@ -86,6 +86,17 @@ def cache_put(key, value, ttl=None):
     _response_cache[key] = (time.time() + ttl if ttl else None, value)
 
 
+def trim_memory():
+    # gc.collect() frees Python objects, but glibc keeps the freed pages in
+    # its arenas — the OS (and Render's OOM meter) still sees them as used.
+    # malloc_trim hands them back. Linux-only; a no-op everywhere else.
+    try:
+        import ctypes
+        ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except Exception:
+        pass
+
+
 def format_lap_time(td) -> str:
     # pandas Timedelta -> "1:29.179" instead of "0 days 00:01:29.179000"
     total = td.total_seconds()
@@ -193,6 +204,7 @@ def get_telemetry(year: int, round: int, driver: str, session: str = "Q"):
     # Python gets around to it.
     del session_obj, lap, tel, data
     gc.collect()
+    trim_memory()
     return result
 
 
