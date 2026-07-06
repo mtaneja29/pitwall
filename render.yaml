@@ -1,0 +1,18 @@
+# Render Blueprint — defines the frontend static site as code.
+# In the Render dashboard: New -> Blueprint -> pick this repo -> Apply.
+#
+# Deliberately does NOT include the existing FastAPI web service
+# (pitwall-9t5c): blueprints create the services they define, and defining
+# the backend here would spin up a duplicate next to the hand-created one.
+services:
+  - type: web
+    name: pitwall-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm run build
+    staticPublishPath: ./dist
+    routes:
+      # SPA fallback: deep links and refreshes all serve index.html
+      - type: rewrite
+        source: /*
+        destination: /index.html
