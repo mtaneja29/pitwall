@@ -150,16 +150,24 @@ button {
 /* ---------- start-light gantry ---------- */
 .startlights {
   display: flex;
-  gap: 13px;
+  gap: 11px;
   justify-content: center;
   width: max-content;
   margin: 0 auto 30px;
-  padding: 11px 16px;
+  padding: 10px 14px;
   background: #07080f;
   border: 1px solid var(--border);
   border-radius: 3px;
+  animation: fadeUp 0.6s ease both 0.1s;
   /* hanging from the top of the screen like the real gantry */
   position: relative;
+}
+
+/* real gantries run two bulbs per column; both share the column's --i */
+.light-col {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
 }
 
 .startlights::before {
@@ -173,8 +181,8 @@ button {
 }
 
 .light {
-  width: 21px;
-  height: 21px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: #14060a;
   box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8);
@@ -213,6 +221,58 @@ button {
   transform: none;
 }
 
+.enter-hint {
+  font: 400 11px var(--mono);
+  color: var(--faint);
+  margin-top: 10px;
+}
+
+/* quick white pulse the moment all lights cut out (1.5s into launch) */
+.lights-out-flash {
+  position: absolute;
+  inset: 0;
+  background: #e9edf6;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cover.launching .lights-out-flash {
+  animation: lightsOutFlash 0.45s ease-out both 1.5s;
+}
+
+@keyframes lightsOutFlash {
+  0% { opacity: 0; }
+  12% { opacity: 0.14; }
+  100% { opacity: 0; }
+}
+
+.feature-strip {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-family: var(--display);
+  font-size: 8px;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin: 14px 0 34px;
+}
+
+.feature-strip .sep {
+  color: var(--red);
+}
+
+.cover-credit {
+  position: absolute;
+  bottom: 2.5vh;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font: 400 10px var(--mono);
+  color: var(--faint);
+}
+
 /* staggered entrance for cover content */
 .fade-1 { animation: fadeUp 0.6s ease both 0.1s; }
 .fade-2 { animation: fadeUp 0.6s ease both 0.28s; }
@@ -228,14 +288,24 @@ button {
   pointer-events: none;
 }
 
+/* two laps racing each other across the bottom — comparison preview */
 .speedline path {
   fill: none;
-  stroke: var(--red);
   stroke-width: 2;
-  opacity: 0.75;
   stroke-dasharray: 2800;
   stroke-dashoffset: 2800;
+}
+
+.speedline .trace-a {
+  stroke: var(--red);
+  opacity: 0.75;
   animation: draw 2.6s ease-out forwards 0.3s;
+}
+
+.speedline .trace-b {
+  stroke: #6692ff;
+  opacity: 0.55;
+  animation: draw 2.6s ease-out forwards 0.55s;
 }
 
 /* ---------- app shell ---------- */
@@ -511,6 +581,24 @@ button {
   color: var(--red-soft);
 }
 
+/* A⇄B swap, lives inline with the summary readback */
+.swap-btn {
+  margin-left: 10px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 1px 8px;
+  font: 400 10.5px var(--mono);
+  color: var(--dim);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.swap-btn:hover {
+  border-color: var(--red);
+  color: var(--text);
+}
+
 .analyze {
   background: var(--red);
   color: #fff;
@@ -585,6 +673,11 @@ button {
   color: var(--dim);
 }
 
+.trackmap .sf-label {
+  font: 400 8px 'B612 Mono', monospace;
+  fill: var(--faint);
+}
+
 .trackmap-scale {
   display: flex;
   align-items: center;
@@ -614,6 +707,25 @@ button {
 .notice.error {
   border-color: rgba(255, 107, 96, 0.4);
   color: var(--danger);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.notice .dismiss {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  opacity: 0.7;
+}
+
+.notice .dismiss:hover {
+  opacity: 1;
 }
 
 .charts {
@@ -807,4 +919,15 @@ button {
 :focus-visible {
   outline: 2px solid var(--red);
   outline-offset: 2px;
+}
+
+/* accessibility: kill decorative motion for users who ask for it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

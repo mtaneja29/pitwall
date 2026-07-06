@@ -27,6 +27,30 @@ function lapSeconds(str) {
   return Number(m) * 60 + Number(s);
 }
 
+// Last picked session, restored on the next visit. localStorage can throw
+// (private mode, disabled storage) — treat it as best-effort.
+const PREFS_KEY = "pitwall-prefs";
+
+function loadPrefs() {
+  try {
+    return JSON.parse(localStorage.getItem(PREFS_KEY)) ?? {};
+  } catch {
+    return {};
+  }
+}
+
+function savePrefs(prefs) {
+  try {
+    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  } catch {
+    /* best-effort */
+  }
+}
+
+// Read once at module load; fields are consumed (cleared) as each level of
+// the picker restores itself, so later fetches fall back to defaults.
+const restore = loadPrefs();
+
 function App() {
   // Landing -> app transition: "cover" shows the landing page, "exiting"
   // plays the slide-up animation with the app already rendered behind it,
@@ -40,13 +64,13 @@ function App() {
 
   // Selection chain: year -> events (races) -> drivers. Each level's options
   // are fetched when the level above changes.
-  const [year, setYear] = useState(DEFAULT_YEAR);
+  const [year, setYear] = useState(restore.year ?? DEFAULT_YEAR);
   const [events, setEvents] = useState([]);
   const [round, setRound] = useState(null);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [drivers, setDrivers] = useState([]);
   // Session within the race weekend (Q by default; sprint weekends add more)
-  const [sessionType, setSessionType] = useState("Q");
+  const [sessionType, setSessionType] = useState(restore.session ?? "Q");
   // Up to two driver codes; order matters — [0] is the baseline (A), [1] the
   // comparison (B). One selected = classic single-driver view.
   const [selected, setSelected] = useState([]);
@@ -68,6 +92,13 @@ function App() {
       .then(() => setApiStatus("live"))
       .catch(() => setApiStatus("down"));
   }, []);
+
+  // Browser tab reflects what's loaded — useful with several tabs open.
+  useEffect(() => {
+    document.title = loadedMeta
+      ? `PitWall — ${loadedMeta.eventName.replace(" Grand Prix", "")} · ${loadedMeta.sessionName}`
+      : "PitWall — F1 telemetry";
+  }, [loadedMeta]);
 
   // The stored session pick may not exist for the selected weekend (chose
   // Sprint in China, then clicked Bahrain). Derive the effective session at
@@ -92,8 +123,14 @@ function App() {
     fetchSchedule(year)
       .then((d) => {
         setEvents(d.events);
-        setRound(d.events[0]?.round ?? null);
+        // first load only: put the user back on the race they had open
+        const saved = restore.round;
+        restore.round = undefined;
+        setRound(
+          d.events.some((e) => e.round === saved) ? saved : d.events[0]?.round ?? null
+        );
         setApiStatus("live");
+        setError(null);
       })
       .catch(() => setError("Couldn't load the race calendar."))
       .finally(() => setEventsLoading(false));
@@ -111,12 +148,25 @@ function App() {
     fetchDrivers(year, round, effectiveSession)
       .then((d) => {
         setDrivers(d.drivers);
-        setSelected((prev) => prev.filter((c) => d.drivers.some((x) => x.code === c)));
+        // first load only: restore last session's driver picks
+        const saved = restore.selected;
+        restore.selected = undefined;
+        setSelected((prev) => {
+          const wanted = saved?.length ? saved : prev;
+          return wanted.filter((c) => d.drivers.some((x) => x.code === c)).slice(0, 2);
+        });
+        setError(null);
       })
       .catch(() => setError("Couldn't load drivers for that session."))
       .finally(() => setDriversLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [round, effectiveSession]);
+
+  // Remember the selection for the next visit.
+  useEffect(() => {
+    if (round == null) return;
+    savePrefs({ year, round, session: sessionType, selected });
+  }, [year, round, sessionType, selected]);
 
   // Click a driver card: toggle off if selected; add if there's room;
   // otherwise swap out the comparison slot and keep the baseline.
@@ -128,6 +178,13 @@ function App() {
           ? [...prev, code]
           : [prev[0], code]
     );
+  }
+
+  // Swap baseline and comparison. Loaded laps swap too — the data's already
+  // here, so the delta trace, table, and map flip instantly with no refetch.
+  function swapDrivers() {
+    setSelected((prev) => (prev.length === 2 ? [prev[1], prev[0]] : prev));
+    setLaps((prev) => (prev?.length === 2 ? [prev[1], prev[0]] : prev));
   }
 
   const slowTimer = useRef(null);
@@ -160,6 +217,10 @@ function App() {
         sessionName: ev?.sessions?.find((s) => s.code === effectiveSession)?.name ?? "Qualifying",
       });
       setApiStatus("live");
+      // bring the fresh results into view once they've rendered
+      setTimeout(() => {
+        document.querySelector(".overview")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 120);
     } catch (err) {
       // "Failed to fetch" here usually means the free-tier proxy dropped the
       // connection while the server was still downloading the session data.
@@ -195,7 +256,13 @@ function App() {
     laps && Math.max(...laps.map((l) => l.telemetry[l.telemetry.length - 1].Distance));
 
   const channels = laps && [
-    { title: "Speed (km/h)", series: channelSeries((p) => p.Speed), height: 220, fill: laps.length === 1 },
+    {
+      title: "Speed (km/h)",
+      series: channelSeries((p) => p.Speed),
+      height: 220,
+      fill: laps.length === 1,
+      fmt: (y) => `${Math.round(y)} km/h`,
+    },
     // delta only exists when there are two laps to compare
     ...(laps.length === 2
       ? [{
@@ -207,11 +274,30 @@ function App() {
           }],
           height: 130,
           zeroLine: true,
+          fmt: (y) => `${y >= 0 ? "+" : ""}${y.toFixed(3)}s`,
         }]
       : []),
-    { title: "Throttle (%)", series: channelSeries((p) => p.Throttle), height: 110 },
-    { title: "Brake", series: channelSeries((p) => Number(p.Brake)), height: 90, stepped: true },
-    { title: "Gear", series: channelSeries((p) => p.nGear), height: 110, stepped: true, showX: true },
+    {
+      title: "Throttle (%)",
+      series: channelSeries((p) => p.Throttle),
+      height: 110,
+      fmt: (y) => `${Math.round(y)}%`,
+    },
+    {
+      title: "Brake",
+      series: channelSeries((p) => Number(p.Brake)),
+      height: 90,
+      stepped: true,
+      fmt: (y) => (y > 0.5 ? "ON" : "off"),
+    },
+    {
+      title: "Gear",
+      series: channelSeries((p) => p.nGear),
+      height: 110,
+      stepped: true,
+      showX: true,
+      fmt: (y) => `${Math.round(y)}`,
+    },
   ];
 
   const eventName = events.find((e) => e.round === round)?.name;
@@ -246,6 +332,7 @@ function App() {
         sessionType={effectiveSession} onSession={setSessionType}
         drivers={drivers} selected={selected} onToggleDriver={toggleDriver} driversLoading={driversLoading}
         onAnalyze={analyze} analyzing={loading} analyzeLabel={analyzeLabel}
+        onSwap={selected.length === 2 ? swapDrivers : null}
         summary={eventName ? `${eventName.replace(" Grand Prix", "")} ${year} · ${effectiveSession}` : ""}
       />
 
@@ -255,7 +342,14 @@ function App() {
           a minute. Data is cached after that.
         </div>
       )}
-      {error && <div className="notice error">{error}</div>}
+      {error && (
+        <div className="notice error">
+          <span>{error}</span>
+          <button className="dismiss" onClick={() => setError(null)} aria-label="Dismiss">
+            ×
+          </button>
+        </div>
+      )}
 
       {loading && !laps && (
         <div>

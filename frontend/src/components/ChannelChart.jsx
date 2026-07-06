@@ -12,7 +12,8 @@ import { Line } from "react-chartjs-2";
 //   height   — px height of this chart's box
 //   zeroLine — emphasize y=0 gridline (used by the delta chart)
 //   fill     — soft area fill under each line (used by the speed chart)
-function ChannelChart({ title, series, xMax, stepped = false, showX = false, height = 140, zeroLine = false, fill = false }) {
+//   fmt      — tooltip value formatter, e.g. brake -> "ON"/"off"
+function ChannelChart({ title, series, xMax, stepped = false, showX = false, height = 140, zeroLine = false, fill = false, fmt }) {
   const data = {
     datasets: series.map((s) => ({
       label: s.label,
@@ -47,7 +48,8 @@ function ChannelChart({ title, series, xMax, stepped = false, showX = false, hei
         bodyFont: { family: "'B612 Mono', monospace", size: 11 },
         callbacks: {
           title: (items) => `${Math.round(items[0].parsed.x)} m`,
-          label: (item) => ` ${item.dataset.label}: ${item.parsed.y.toFixed(zeroLine ? 3 : 1)}`,
+          label: (item) =>
+            ` ${item.dataset.label}: ${fmt ? fmt(item.parsed.y) : item.parsed.y.toFixed(1)}`,
         },
       },
     },

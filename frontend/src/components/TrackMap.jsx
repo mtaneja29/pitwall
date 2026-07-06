@@ -30,7 +30,7 @@ const PAD = 18;
 function TrackMap({ points, label }) {
   // Scale raw FastF1 world coordinates into the SVG viewBox once per lap.
   // SVG y grows downward while track Y grows upward -> flip it.
-  const { segments, toSvg } = useMemo(() => {
+  const { segments, toSvg, sfLine } = useMemo(() => {
     const xs = points.map((p) => p.X);
     const ys = points.map((p) => p.Y);
     const minX = Math.min(...xs), maxX = Math.max(...xs);
@@ -57,7 +57,21 @@ function TrackMap({ points, label }) {
         color: speedColor(t),
       });
     }
-    return { segments, toSvg };
+
+    // start/finish line: a short tick perpendicular to the direction of
+    // travel at the first sample (Distance 0 = crossing the line)
+    const p0 = toSvg(points[0]);
+    const p1 = toSvg(points[Math.min(4, points.length - 1)]);
+    const len = Math.hypot(p1.x - p0.x, p1.y - p0.y) || 1;
+    const nx = -(p1.y - p0.y) / len; // unit normal
+    const ny = (p1.x - p0.x) / len;
+    const sfLine = {
+      x1: p0.x - nx * 7, y1: p0.y - ny * 7,
+      x2: p0.x + nx * 7, y2: p0.y + ny * 7,
+      lx: p0.x + nx * 15, ly: p0.y + ny * 15, // label offset
+    };
+
+    return { segments, toSvg, sfLine };
   }, [points]);
 
   // Crosshair -> move the position dot. Direct attribute updates through a
@@ -95,6 +109,13 @@ function TrackMap({ points, label }) {
         {segments.map((s, i) => (
           <path key={i} d={s.d} stroke={s.color} strokeWidth="3" strokeLinecap="round" fill="none" />
         ))}
+        <line
+          x1={sfLine.x1} y1={sfLine.y1} x2={sfLine.x2} y2={sfLine.y2}
+          stroke="#e9edf6" strokeWidth="2.5" opacity="0.85"
+        />
+        <text x={sfLine.lx} y={sfLine.ly} className="sf-label" textAnchor="middle" dominantBaseline="middle">
+          S/F
+        </text>
         <circle ref={dotRef} r="5" fill="#fff" stroke="#0b0b0d" strokeWidth="1.5" style={{ opacity: 0 }} />
       </svg>
       <div className="trackmap-scale">

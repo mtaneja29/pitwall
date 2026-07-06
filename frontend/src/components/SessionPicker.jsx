@@ -14,7 +14,7 @@ function SessionPicker({
   events, round, onRound, eventsLoading,
   sessions, sessionType, onSession,
   drivers, selected, onToggleDriver, driversLoading,
-  onAnalyze, analyzing, analyzeLabel, summary,
+  onAnalyze, analyzing, analyzeLabel, summary, onSwap,
 }) {
   return (
     <div className="picker">
@@ -96,6 +96,15 @@ function SessionPicker({
               {selected[0]}
               {selected[1] && <><span className="vs"> vs </span>{selected[1]}</>}
               {summary && ` — ${summary}`}
+              {onSwap && (
+                <button
+                  className="swap-btn"
+                  onClick={onSwap}
+                  title="Swap baseline and comparison (A ⇄ B)"
+                >
+                  A⇄B
+                </button>
+              )}
             </>
           )}
         </span>

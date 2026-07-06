@@ -4,7 +4,17 @@ const API = import.meta.env.VITE_API_URL || "https://pitwall-9t5c.onrender.com";
 
 async function getJSON(path) {
   const res = await fetch(`${API}${path}`);
-  if (!res.ok) throw new Error(`Server returned ${res.status}`);
+  if (!res.ok) {
+    // FastAPI puts the human-readable reason in {detail: "..."} — surface
+    // that ("No lap found for VER") instead of a bare status code.
+    let detail;
+    try {
+      detail = (await res.json()).detail;
+    } catch {
+      /* non-JSON error body */
+    }
+    throw new Error(detail || `Server returned ${res.status}`);
+  }
   return res.json();
 }
 
