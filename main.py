@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 import gc
 import os
 import threading
+import time
 import uvicorn
 import pandas as pd
 import fastf1
@@ -60,6 +61,31 @@ def check_session_code(session: str) -> str:
     return code
 
 
+# Response cache for the small endpoints. A past session's driver list and
+# a past season's calendar never change, so computing them once per process
+# is enough — after that they serve in microseconds instead of the 5-15s a
+# FastF1 session load costs. Telemetry responses are NOT cached here: at
+# ~1MB each they'd eat the 512MB instance; they rely on FastF1's disk cache.
+_response_cache: dict = {}
+# The current season's schedule gains races as the year goes on -> short TTL.
+_SCHEDULE_TTL_SECONDS = 6 * 3600
+
+
+def cache_get(key):
+    hit = _response_cache.get(key)
+    if hit is None:
+        return None
+    expires, value = hit
+    if expires is not None and time.time() > expires:
+        del _response_cache[key]
+        return None
+    return value
+
+
+def cache_put(key, value, ttl=None):
+    _response_cache[key] = (time.time() + ttl if ttl else None, value)
+
+
 def format_lap_time(td) -> str:
     # pandas Timedelta -> "1:29.179" instead of "0 days 00:01:29.179000"
     total = td.total_seconds()
@@ -73,11 +99,14 @@ def home():
 
 @app.get("/schedule")
 def get_schedule(year: int):
+    cached = cache_get(("schedule", year))
+    if cached is not None:
+        return cached
     # Race calendar for the season -> feeds the Grand Prix dropdown.
     schedule = fastf1.get_event_schedule(year, include_testing=False)
     # Only events whose qualifying has already happened have telemetry.
     past = schedule[schedule["EventDate"] < pd.Timestamp.now()]
-    return {
+    result = {
         "year": year,
         "events": [
             {
@@ -96,6 +125,10 @@ def get_schedule(year: int):
             for _, row in past.iterrows()
         ],
     }
+    # past seasons are frozen; the current one grows as races happen
+    is_past_season = year < pd.Timestamp.now().year
+    cache_put(("schedule", year), result, ttl=None if is_past_season else _SCHEDULE_TTL_SECONDS)
+    return result
 
 
 @app.get("/drivers")
@@ -104,11 +137,14 @@ def get_drivers(year: int, round: int, session: str = "Q"):
     # classification order. TeamColor gives each driver their real team
     # color for the charts.
     code = check_session_code(session)
+    cached = cache_get(("drivers", year, round, code))
+    if cached is not None:
+        return cached
     try:
         session_obj = load_session(year, round, code, telemetry=False)
     except Exception:
         raise HTTPException(status_code=404, detail="Session not found or not loadable")
-    return {
+    result = {
         "drivers": [
             {
                 "code": row["Abbreviation"],
@@ -119,6 +155,11 @@ def get_drivers(year: int, round: int, session: str = "Q"):
             for _, row in session_obj.results.iterrows()
         ]
     }
+    # a session that has happened never changes its classification
+    cache_put(("drivers", year, round, code), result)
+    del session_obj
+    gc.collect()
+    return result
 
 
 @app.get("/telemetry")
