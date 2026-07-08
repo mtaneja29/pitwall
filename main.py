@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import RedirectResponse
 import gc
 import os
 import threading
@@ -103,9 +104,18 @@ def format_lap_time(td) -> str:
     return f"{int(total // 60)}:{total % 60:06.3f}"
 
 
+FRONTEND_URL = "https://pitwall-frontend.onrender.com"
+
+
 @app.get("/")
-def home():
-    return {"message": "Hello F1"}
+def home(request: Request):
+    # Humans who land on the API from an old link get sent to the actual
+    # site; programmatic callers (the frontend's health ping, curl, the
+    # keep-alive job) still get JSON. Browsers announce text/html in their
+    # Accept header — fetch() and curl don't.
+    if "text/html" in request.headers.get("accept", ""):
+        return RedirectResponse(FRONTEND_URL, status_code=307)
+    return {"message": "Hello F1", "app": FRONTEND_URL, "docs": "/docs"}
 
 
 @app.get("/schedule")
