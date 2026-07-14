@@ -56,6 +56,7 @@ function App() {
   // plays the slide-up animation with the app already rendered behind it,
   // "app" unmounts the cover entirely.
   const [stage, setStage] = useState("cover");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   function enterApp() {
     setStage("exiting");
@@ -323,21 +324,36 @@ function App() {
       {stage !== "app" && (
         <Cover exiting={stage === "exiting"} onEnter={enterApp} apiStatus={apiStatus} />
       )}
-    <div className="app">
-      <Header apiStatus={apiStatus} />
+    <div className="layout">
+      <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
+        <div className="sidebar-header">
+          <span className="wordmark">
+            PIT<span className="bar">|</span>WALL
+          </span>
+          <button className="close-sidebar" onClick={() => setSidebarOpen(false)} aria-label="Close sidebar">✕</button>
+        </div>
+        <SessionPicker
+          year={year} onYear={setYear}
+          events={events} round={round} onRound={setRound} eventsLoading={eventsLoading}
+          sessions={availableSessions}
+          sessionType={effectiveSession} onSession={setSessionType}
+          drivers={drivers} selected={selected} onToggleDriver={toggleDriver} driversLoading={driversLoading}
+          onAnalyze={() => { setSidebarOpen(false); analyze(); }} analyzing={loading} analyzeLabel={analyzeLabel}
+          onSwap={selected.length === 2 ? swapDrivers : null}
+        />
+      </aside>
 
-      <SessionPicker
-        year={year} onYear={setYear}
-        events={events} round={round} onRound={setRound} eventsLoading={eventsLoading}
-        sessions={availableSessions}
-        sessionType={effectiveSession} onSession={setSessionType}
-        drivers={drivers} selected={selected} onToggleDriver={toggleDriver} driversLoading={driversLoading}
-        onAnalyze={analyze} analyzing={loading} analyzeLabel={analyzeLabel}
-        onSwap={selected.length === 2 ? swapDrivers : null}
-        summary={eventName ? `${eventName.replace(" Grand Prix", "")} ${year} · ${effectiveSession}` : ""}
-      />
-
-      {slow && (
+      <main className="main-content">
+        <Header 
+          apiStatus={apiStatus} 
+          onMenuClick={() => setSidebarOpen(true)} 
+          contextTitle={eventName ? `${eventName.replace(" Grand Prix", "")} ${year} · ${
+            {SQ: "Sprint Quali", S: "Sprint", Q: "Qualifying", R: "Race"}[effectiveSession] || effectiveSession
+          }` : ""}
+        />
+        
+        <div className="dashboard-scroller">
+          {slow && (
         <div className="notice">
           Free-tier server is waking from sleep — the first request can take up to
           a minute. Data is cached after that.
@@ -467,6 +483,8 @@ function App() {
           fastest qualifying laps head-to-head.
         </div>
       )}
+        </div>
+      </main>
     </div>
     </>
   );

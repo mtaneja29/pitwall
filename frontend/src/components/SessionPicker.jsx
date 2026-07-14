@@ -1,9 +1,5 @@
-// Session selection as tactile controls instead of dropdowns:
-// season pills -> scrollable race chips -> driver cards in team colors.
-// Still fully controlled: App owns the state, this renders it.
 const YEARS = [2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019];
 
-// short labels for the session pills; full name goes in the tooltip
 const SESSION_LABELS = {
   FP1: "FP1", FP2: "FP2", FP3: "FP3",
   SQ: "Sprint Quali", S: "Sprint", Q: "Qualifying", R: "Race",
@@ -14,100 +10,97 @@ function SessionPicker({
   events, round, onRound, eventsLoading,
   sessions, sessionType, onSession,
   drivers, selected, onToggleDriver, driversLoading,
-  onAnalyze, analyzing, analyzeLabel, summary, onSwap,
+  onAnalyze, analyzing, analyzeLabel, onSwap,
 }) {
   return (
     <div className="picker">
-      <div className="picker-label">Season</div>
-      <div className="pills">
-        {YEARS.map((y) => (
-          <button key={y} className={`pill${y === year ? " sel" : ""}`} onClick={() => onYear(y)}>
-            {y}
-          </button>
-        ))}
-      </div>
-
-      <div className="picker-label">Grand Prix</div>
-      <div className="race-row">
-        {eventsLoading &&
-          [...Array(8)].map((_, i) => (
-            <div key={i} className="skeleton" style={{ width: 110, height: 46, flex: "0 0 auto" }} />
+      
+      <div className="picker-section">
+        <label className="picker-label">Season</label>
+        <select className="season-select" value={year} onChange={(e) => onYear(Number(e.target.value))}>
+          {YEARS.map((y) => (
+            <option key={y} value={y}>{y}</option>
           ))}
-        {events.map((ev) => (
-          <button
-            key={ev.round}
-            className={`race-chip${ev.round === round ? " sel" : ""}`}
-            onClick={() => onRound(ev.round)}
-          >
-            <span className="round">
-              R{ev.round}{" "}
-              <span className="rdate">
-                · {new Date(ev.date).toLocaleDateString("en", { month: "short", day: "numeric" })}
-              </span>
-            </span>
-            <span className="rname">{ev.name.replace(" Grand Prix", "")}</span>
-          </button>
-        ))}
+        </select>
       </div>
 
-      <div className="picker-label">Session</div>
-      <div className="pills">
-        {(sessions.length ? sessions : [{ code: "Q", name: "Qualifying" }]).map((s) => (
-          <button
-            key={s.code}
-            className={`pill${s.code === sessionType ? " sel" : ""}`}
-            title={s.name}
-            onClick={() => onSession(s.code)}
-          >
-            {SESSION_LABELS[s.code] ?? s.code}
-          </button>
-        ))}
-      </div>
-
-      <div className="picker-label">
-        Drivers <span className="hint">— pick one, or two to compare</span>
-      </div>
-      <div className="driver-grid">
-        {driversLoading &&
-          [...Array(10)].map((_, i) => <div key={i} className="skeleton" style={{ height: 54 }} />)}
-        {drivers.map((d) => {
-          const slot = selected.indexOf(d.code); // 0 = primary, 1 = comparison
-          return (
+      <div className="picker-section scrollable">
+        <label className="picker-label">Grand Prix</label>
+        <div className="race-list">
+          {eventsLoading &&
+            [...Array(5)].map((_, i) => (
+              <div key={i} className="skeleton" style={{ height: 42, marginBottom: 8 }} />
+            ))}
+          {events.map((ev) => (
             <button
-              key={d.code}
-              className={`driver-card${slot >= 0 ? " sel" : ""}`}
-              style={{ "--team": d.color }}
-              onClick={() => onToggleDriver(d.code)}
-              title={d.team}
+              key={ev.round}
+              className={`race-item${ev.round === round ? " sel" : ""}`}
+              onClick={() => onRound(ev.round)}
             >
-              <span className="team-bar" />
-              <span className="code">{d.code}</span>
-              {slot >= 0 && <span className="slot">{slot === 0 ? "A" : "B"}</span>}
-              <div className="dname">{d.name}</div>
+              <span className="round">R{ev.round}</span>
+              <span className="rname">{ev.name.replace(" Grand Prix", "")}</span>
             </button>
-          );
-        })}
+          ))}
+        </div>
+      </div>
+
+      <div className="picker-section">
+        <label className="picker-label">Session</label>
+        <div className="session-grid">
+          {(sessions.length ? sessions : [{ code: "Q", name: "Qualifying" }]).map((s) => (
+            <button
+              key={s.code}
+              className={`pill${s.code === sessionType ? " sel" : ""}`}
+              title={s.name}
+              onClick={() => onSession(s.code)}
+            >
+              {SESSION_LABELS[s.code] ?? s.code}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="picker-section scrollable-drivers">
+        <label className="picker-label">
+          Drivers <span className="hint">(pick 1 or 2)</span>
+        </label>
+        <div className="driver-list">
+          {driversLoading &&
+            [...Array(6)].map((_, i) => <div key={i} className="skeleton" style={{ height: 36, marginBottom: 4 }} />)}
+          {drivers.map((d) => {
+            const slot = selected.indexOf(d.code);
+            return (
+              <button
+                key={d.code}
+                className={`driver-item${slot >= 0 ? " sel" : ""}`}
+                style={{ "--team": d.color }}
+                onClick={() => onToggleDriver(d.code)}
+                title={d.team}
+              >
+                <span className="team-bar" />
+                <span className="code">{d.code}</span>
+                <span className="dname">{d.name}</span>
+                {slot >= 0 && <span className="slot">{slot === 0 ? "A" : "B"}</span>}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="picker-footer">
-        <span className="selection-summary">
+        <div className="selection-summary">
           {selected.length > 0 && (
-            <>
+            <div className="matchup">
               {selected[0]}
               {selected[1] && <><span className="vs"> vs </span>{selected[1]}</>}
-              {summary && ` — ${summary}`}
-              {onSwap && (
-                <button
-                  className="swap-btn"
-                  onClick={onSwap}
-                  title="Swap baseline and comparison (A ⇄ B)"
-                >
-                  A⇄B
+              {onSwap && selected.length === 2 && (
+                <button className="swap-btn" onClick={onSwap} title="Swap A/B">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 10h14l-4-4M17 14H3l4 4"/></svg>
                 </button>
               )}
-            </>
+            </div>
           )}
-        </span>
+        </div>
         <button className="analyze" onClick={onAnalyze} disabled={analyzing || selected.length === 0}>
           {analyzeLabel}
         </button>
