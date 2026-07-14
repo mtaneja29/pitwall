@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 const STATUS_TEXT = {
-  waking: "Waking the backend — free tier, can take up to a minute",
+  waking: "Waking backend — free tier, may take a minute",
   live: "Backend live",
   down: "Backend unreachable",
 };
@@ -55,16 +55,13 @@ function Cover({ exiting, onEnter, apiStatus }) {
 
         <div className="feature-strip fade-2" aria-label="Features">
           <span>Lap comparison</span>
-          <span className="sep">·</span>
           <span>Δ time</span>
-          <span className="sep">·</span>
           <span>Track map</span>
-          <span className="sep">·</span>
           <span>Every session since 2019</span>
         </div>
 
         <button className="enter fade-3" onClick={launch} disabled={launching}>
-          {launching ? "Lights out…" : "Start lights"}
+          {launching ? "Lights out…" : "Start session"}
         </button>
         <div className="enter-hint fade-3">or press Enter</div>
 

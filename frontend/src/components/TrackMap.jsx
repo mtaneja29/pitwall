@@ -9,9 +9,9 @@ import { onCrosshairMove } from "../crosshairSync";
 // slow -> fast color stops (blue -> green -> amber -> F1 red)
 const STOPS = [
   [59, 130, 246],
-  [63, 214, 140],
-  [245, 185, 68],
-  [225, 6, 0],
+  [34, 197, 94],
+  [234, 179, 8],
+  [239, 68, 68],
 ];
 
 // t in [0,1] -> css color interpolated across STOPS
@@ -121,12 +121,12 @@ function TrackMap({ points, label }) {
         ))}
         <line
           x1={sfLine.x1} y1={sfLine.y1} x2={sfLine.x2} y2={sfLine.y2}
-          stroke="#e9edf6" strokeWidth="2.5" opacity="0.85"
+          stroke="#f0f0f0" strokeWidth="2.5" opacity="0.8"
         />
         <text x={sfLine.lx} y={sfLine.ly} className="sf-label" textAnchor="middle" dominantBaseline="middle">
           S/F
         </text>
-        <circle ref={dotRef} r="5" fill="#fff" stroke="#0b0b0d" strokeWidth="1.5" style={{ opacity: 0 }} />
+        <circle ref={dotRef} r="5" fill="#fff" stroke="#0a0a0a" strokeWidth="1.5" style={{ opacity: 0 }} />
       </svg>
       <div className="trackmap-scale">
         <span>slow</span>

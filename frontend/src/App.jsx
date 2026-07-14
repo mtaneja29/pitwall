@@ -246,7 +246,7 @@ function App() {
 
   const toSeries = (getY, i) => ({
     label: laps[i].driver,
-    color: laps[i].info?.color ?? (i === 0 ? "#7cc5e6" : "#ecf4f7"),
+    color: laps[i].info?.color ?? (i === 0 ? "#e0e0e0" : "#808080"),
     dash: i === 1 && sameColor,
     points: laps[i].telemetry.map((p) => ({ x: p.Distance, y: getY(p) })),
   });
@@ -270,7 +270,7 @@ function App() {
           title: `Δ ${laps[1].driver} to ${laps[0].driver} (s)`,
           series: [{
             label: `Δ ${laps[1].driver}`,
-            color: sameColor ? "#ecf4f7" : laps[1].info?.color ?? "#ecf4f7",
+            color: sameColor ? "#808080" : laps[1].info?.color ?? "#808080",
             points: computeDelta(laps[0].telemetry, laps[1].telemetry),
           }],
           height: 130,
