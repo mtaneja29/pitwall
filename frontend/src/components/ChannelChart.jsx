@@ -18,6 +18,7 @@ function ChannelChart({ title, series, xMax, stepped = false, showX = false, hei
     datasets: series.map((s) => ({
       label: s.label,
       data: s.points, // {x, y} pairs -> Chart.js plots on a real numeric axis
+      parsing: false, // Huge performance boost for large datasets
       borderColor: s.color,
       borderWidth: 1.6,
       pointRadius: 0,
