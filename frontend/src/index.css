@@ -1,18 +1,20 @@
-/* PitWall design system — "night race timing tower".
-   Deep blue-black under floodlights; the FIA timing palette does the
-   talking: purple = fastest, green = personal best, F1 red kept for the
-   brand and the kerbs. Defined once as CSS variables so every component
-   pulls from the same palette. */
+/* PitWall design system — "Gulf dusk".
+   The powder-blue + orange racing livery translated to UI: deep petrol
+   night base, gulf orange as THE accent, powder blue as the second voice.
+   FIA timing semantics stay (purple = fastest, green = personal best) and
+   the start lights stay red — that part is regulation, not branding. */
 :root {
-  --bg: #05060c;          /* page — night-race black, blue undertone */
-  --panel: #0b0d17;       /* cards, pickers */
-  --panel-2: #131627;     /* inputs, chips, hover states */
-  --border: #1c2134;
-  --text: #e9edf6;        /* floodlight white */
-  --dim: #8b93a8;         /* secondary text */
-  --faint: #565e73;       /* hints, axis labels */
-  --red: #e10600;         /* F1 red — brand + kerbs */
-  --red-soft: #ff958f;    /* red-tinted text on dark */
+  --bg: #081014;          /* page — petrol black */
+  --panel: #0d151c;       /* cards, pickers */
+  --panel-2: #142028;     /* inputs, chips, hover states */
+  --border: #223140;
+  --text: #ecf4f7;        /* cool paper white */
+  --dim: #96abb8;         /* secondary text */
+  --faint: #5c7280;       /* hints, axis labels */
+  --accent: #f2761b;      /* gulf orange — the brand color */
+  --accent-soft: #ffb37e; /* orange-tinted text on dark */
+  --blue: #7cc5e6;        /* gulf powder blue — secondary accent */
+  --lights: #e10600;      /* start lights are red by regulation */
   --purple: #c04df9;      /* timing purple — fastest */
   --ok: #2ee6a8;          /* timing green — personal best */
   --warn: #ffd23f;
@@ -25,11 +27,12 @@
   --mono: 'B612 Mono', ui-monospace, Consolas, monospace;
   --display: 'Michroma', sans-serif;
 
-  /* red/white kerb stripe, used as panel accents */
-  --kerb: repeating-linear-gradient(
-    -45deg,
-    var(--red) 0 8px,
-    #e9edf6 8px 16px
+  /* gulf racing stripe: orange center band on powder blue */
+  --stripe: linear-gradient(
+    180deg,
+    var(--blue) 0 1px,
+    var(--accent) 1px 3px,
+    var(--blue) 3px 4px
   );
 
   color-scheme: dark;
@@ -45,9 +48,9 @@ body {
      of track-side sodium warmth at the horizon, and ultra-faint scanlines
      like a trackside timing monitor — all CSS, no images */
   background:
-    repeating-linear-gradient(0deg, rgba(233, 237, 246, 0.012) 0 1px, transparent 1px 4px),
-    radial-gradient(1100px 480px at 50% -160px, rgba(164, 190, 255, 0.10), transparent 70%),
-    radial-gradient(900px 300px at 85% 110%, rgba(225, 6, 0, 0.05), transparent 70%),
+    repeating-linear-gradient(0deg, rgba(236, 244, 247, 0.012) 0 1px, transparent 1px 4px),
+    radial-gradient(1100px 480px at 50% -160px, rgba(124, 197, 230, 0.10), transparent 70%),
+    radial-gradient(900px 300px at 85% 110%, rgba(242, 118, 27, 0.06), transparent 70%),
     var(--bg);
   color: var(--text);
   font: 15px/1.5 var(--sans);
@@ -101,7 +104,7 @@ button {
 }
 
 .wordmark .bar {
-  color: var(--red);
+  color: var(--accent);
 }
 
 /* Michroma is naturally wide — smaller sizes than a grotesque would need */
@@ -124,7 +127,7 @@ button {
 }
 
 .enter {
-  background: var(--red);
+  background: var(--accent);
   color: #fff;
   border: none;
   border-radius: 0;
@@ -138,7 +141,7 @@ button {
 }
 
 .enter:hover {
-  background: #ff1e14;
+  background: #ff8b33;
   transform: translateY(-2px);
 }
 
@@ -200,7 +203,7 @@ button {
 
 @keyframes lightOn {
   to {
-    background: var(--red);
+    background: var(--lights);
     box-shadow:
       0 0 16px rgba(225, 6, 0, 0.9),
       0 0 42px rgba(225, 6, 0, 0.45),
@@ -260,7 +263,7 @@ button {
 }
 
 .feature-strip .sep {
-  color: var(--red);
+  color: var(--accent);
 }
 
 .cover-credit {
@@ -297,13 +300,13 @@ button {
 }
 
 .speedline .trace-a {
-  stroke: var(--red);
+  stroke: var(--accent);
   opacity: 0.75;
   animation: draw 2.6s ease-out forwards 0.3s;
 }
 
 .speedline .trace-b {
-  stroke: #6692ff;
+  stroke: var(--blue);
   opacity: 0.55;
   animation: draw 2.6s ease-out forwards 0.55s;
 }
@@ -317,12 +320,18 @@ button {
 }
 
 .header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 14px;
+  padding: 12px 0 12px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 16px;
+  background: rgba(8, 16, 20, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .brand {
@@ -344,8 +353,8 @@ button {
 }
 
 .tab.active {
-  background: rgba(225, 6, 0, 0.14);
-  color: var(--red-soft);
+  background: rgba(242, 118, 27, 0.14);
+  color: var(--accent-soft);
 }
 
 .tab.soon {
@@ -375,7 +384,8 @@ button {
 .picker {
   position: relative;
   overflow: hidden;
-  background: var(--panel);
+  background: linear-gradient(180deg, #101a22 0%, #0b1218 100%);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(124, 197, 230, 0.07);
   border: 1px solid var(--border);
   border-radius: 3px;
   padding: 14px 16px;
@@ -390,7 +400,7 @@ button {
   left: 0;
   right: 0;
   height: 2px;
-  background: var(--kerb);
+  background: var(--stripe);
   opacity: 0.6;
 }
 
@@ -434,14 +444,14 @@ button {
 }
 
 .pill:hover {
-  border-color: #2e3650;
+  border-color: #33475a;
   color: var(--text);
 }
 
 .pill.sel {
-  background: rgba(225, 6, 0, 0.14);
-  border-color: var(--red);
-  color: var(--red-soft);
+  background: rgba(242, 118, 27, 0.14);
+  border-color: var(--accent);
+  color: var(--accent-soft);
 }
 
 /* races: one horizontal snap-scrolling row */
@@ -468,13 +478,15 @@ button {
 }
 
 .race-chip:hover {
-  border-color: #2e3650;
+  border-color: #33475a;
   transform: translateY(-2px);
 }
 
 .race-chip.sel {
-  border-color: var(--red);
-  background: rgba(225, 6, 0, 0.1);
+  border-color: var(--accent);
+  background:
+    linear-gradient(180deg, rgba(242, 118, 27, 0.55) 0 2px, transparent 2px),
+    rgba(242, 118, 27, 0.1);
 }
 
 .race-chip .round {
@@ -526,6 +538,7 @@ button {
 .driver-card.sel {
   border-color: var(--team);
   background: color-mix(in srgb, var(--team) 14%, var(--panel-2));
+  box-shadow: 0 0 18px color-mix(in srgb, var(--team) 28%, transparent);
 }
 
 .driver-card .team-bar {
@@ -578,7 +591,7 @@ button {
 }
 
 .selection-summary .vs {
-  color: var(--red-soft);
+  color: var(--accent-soft);
 }
 
 /* A⇄B swap, lives inline with the summary readback */
@@ -595,12 +608,12 @@ button {
 }
 
 .swap-btn:hover {
-  border-color: var(--red);
+  border-color: var(--accent);
   color: var(--text);
 }
 
 .analyze {
-  background: var(--red);
+  background: var(--accent);
   color: #fff;
   border: none;
   border-radius: 0;
@@ -614,9 +627,9 @@ button {
 }
 
 .analyze:hover {
-  background: #ff1e14;
+  background: #ff8b33;
   transform: translateY(-1px);
-  box-shadow: 0 4px 20px rgba(225, 6, 0, 0.35);
+  box-shadow: 0 4px 20px rgba(242, 118, 27, 0.35);
 }
 .analyze:disabled { opacity: 0.5; cursor: wait; transform: none; }
 
@@ -638,7 +651,8 @@ button {
 
 /* ---------- track map ---------- */
 .trackmap {
-  background: var(--panel);
+  background: linear-gradient(180deg, #101a22 0%, #0b1218 100%);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(124, 197, 230, 0.07);
   border: 1px solid var(--border);
   border-radius: 3px;
   padding: 10px 14px 8px;
@@ -731,7 +745,8 @@ button {
 .charts {
   position: relative;
   overflow: hidden;
-  background: var(--panel);
+  background: linear-gradient(180deg, #101a22 0%, #0b1218 100%);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(124, 197, 230, 0.07);
   border: 1px solid var(--border);
   border-radius: 3px;
   padding: 16px 16px 8px;
@@ -801,9 +816,14 @@ button {
 
 .skeleton {
   border-radius: 3px;
-  background: var(--panel-2);
-  animation: pulse 1.4s ease-in-out infinite;
+  background: linear-gradient(100deg, var(--panel-2) 40%, #1c2d38 50%, var(--panel-2) 60%);
+  background-size: 200% 100%;
+  animation: shimmer 1.3s linear infinite;
   margin-bottom: 12px;
+}
+
+@keyframes shimmer {
+  to { background-position: -200% 0; }
 }
 
 .empty {
@@ -815,7 +835,9 @@ button {
 
 /* ---------- classification table ---------- */
 .results {
-  background: var(--panel);
+  position: relative;
+  background: linear-gradient(180deg, #101a22 0%, #0b1218 100%);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(124, 197, 230, 0.07);
   border: 1px solid var(--border);
   border-radius: 3px;
   padding: 10px 16px 4px;
@@ -823,14 +845,6 @@ button {
   overflow-x: auto;
 }
 
-.results-title {
-  font-family: var(--display);
-  font-size: 9px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--faint);
-  margin: 2px 0 4px;
-}
 
 .results table {
   width: 100%;
@@ -850,7 +864,7 @@ button {
 
 .results td {
   padding: 12px 12px 12px 0;
-  border-bottom: 1px solid rgba(28, 33, 52, 0.55);
+  border-bottom: 1px solid rgba(34, 49, 64, 0.55);
   font-size: 12.5px;
   color: var(--dim);
   vertical-align: middle;
@@ -917,7 +931,7 @@ button {
 
 /* keyboard affordance without decorating mouse clicks */
 :focus-visible {
-  outline: 2px solid var(--red);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -930,4 +944,151 @@ button {
     animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ---------- results header + ghost numeral ---------- */
+.results-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 8px;
+}
+
+.results-event {
+  font-family: var(--display);
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.session-chip {
+  font: 400 10px var(--mono);
+  color: var(--accent-soft);
+  background: rgba(242, 118, 27, 0.12);
+  border-radius: 2px;
+  padding: 2px 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* oversized round number bleeding off the panel corner */
+.ghost-round {
+  position: absolute;
+  right: -8px;
+  bottom: -34px;
+  font-family: var(--display);
+  font-size: 120px;
+  line-height: 1;
+  color: rgba(124, 197, 230, 0.05);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* light sweep across the primary buttons on hover */
+.analyze,
+.enter {
+  position: relative;
+  overflow: hidden;
+}
+
+.analyze::after,
+.enter::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.45s ease;
+}
+
+.analyze:hover::after,
+.enter:hover::after {
+  left: 120%;
+}
+
+/* page scrollbar in theme */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #223140;
+  border-radius: 5px;
+  border: 2px solid var(--bg);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #33475a;
+}
+
+/* ---------- animation overhaul ---------- */
+/* picker content cascades in, one control group after the next */
+.picker > * {
+  animation: fadeUp 0.45s ease both;
+}
+.picker > :nth-child(1) { animation-delay: 0.02s; }
+.picker > :nth-child(2) { animation-delay: 0.06s; }
+.picker > :nth-child(3) { animation-delay: 0.1s; }
+.picker > :nth-child(4) { animation-delay: 0.14s; }
+.picker > :nth-child(5) { animation-delay: 0.18s; }
+.picker > :nth-child(6) { animation-delay: 0.22s; }
+.picker > :nth-child(7) { animation-delay: 0.26s; }
+.picker > :nth-child(8) { animation-delay: 0.3s; }
+.picker > :nth-child(9) { animation-delay: 0.34s; }
+
+/* results arrive as a sequence: map, then table, then rows */
+.results { animation-delay: 0.08s; }
+.results tbody tr { animation: fadeUp 0.4s ease both; }
+.results tbody tr:nth-child(1) { animation-delay: 0.18s; }
+.results tbody tr:nth-child(2) { animation-delay: 0.28s; }
+
+/* track map draws itself around the lap (per-segment delay set inline) */
+.trackmap path.seg {
+  opacity: 0;
+  animation: segIn 0.25s ease forwards;
+}
+
+@keyframes segIn {
+  to { opacity: 1; }
+}
+
+/* the position dot + S/F marker wait for the line to finish drawing */
+.trackmap line,
+.trackmap .sf-label {
+  animation: segIn 0.4s ease forwards;
+  opacity: 0;
+  animation-delay: 1.5s;
+}
+
+/* loading: the analyze button becomes a crawling gulf barber pole */
+.analyze:disabled {
+  background: repeating-linear-gradient(-45deg, #f2761b 0 10px, #d95f0e 10px 20px);
+  background-size: 28px 28px;
+  animation: crawl 0.7s linear infinite;
+}
+
+@keyframes crawl {
+  to { background-position: 28px 0; }
+}
+
+/* driver hover: the team bar leans in */
+.driver-card .team-bar {
+  transition: width 0.15s ease;
+}
+
+.driver-card:hover .team-bar {
+  width: 6px;
+}
+
+/* status dot glow when live */
+.dot.live {
+  box-shadow: 0 0 8px rgba(46, 230, 168, 0.6);
 }

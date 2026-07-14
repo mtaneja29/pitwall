@@ -56,7 +56,7 @@ export const crosshairSync = {
     if (x < left || x > right) return;
     const { ctx } = chart;
     ctx.save();
-    ctx.strokeStyle = "rgba(233, 237, 246, 0.4)";
+    ctx.strokeStyle = "rgba(236, 244, 247, 0.4)";
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]);
     ctx.beginPath();

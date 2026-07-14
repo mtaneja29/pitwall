@@ -30,8 +30,8 @@ function ChannelChart({ title, series, xMax, stepped = false, showX = false, hei
     })),
   };
 
-  const grid = { color: "rgba(164,190,255,0.06)" };
-  const ticks = { color: "#565e73", font: { size: 10, family: "'B612 Mono', monospace" } };
+  const grid = { color: "rgba(124,197,230,0.07)" };
+  const ticks = { color: "#5c7280", font: { size: 10, family: "'B612 Mono', monospace" } };
 
   const options = {
     responsive: true,
@@ -41,8 +41,8 @@ function ChannelChart({ title, series, xMax, stepped = false, showX = false, hei
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: "rgba(11,13,23,0.95)",
-        borderColor: "#1c2134",
+        backgroundColor: "rgba(13,21,28,0.95)",
+        borderColor: "#223140",
         borderWidth: 1,
         titleFont: { family: "'B612 Mono', monospace", size: 10 },
         bodyFont: { family: "'B612 Mono', monospace", size: 11 },
@@ -60,14 +60,14 @@ function ChannelChart({ title, series, xMax, stepped = false, showX = false, hei
         max: xMax,
         grid,
         ticks: { ...ticks, display: showX, callback: (v) => Math.round(v).toLocaleString() },
-        title: { display: showX, text: "Distance (m)", color: "#8b93a8", font: { size: 11 } },
+        title: { display: showX, text: "Distance (m)", color: "#96abb8", font: { size: 11 } },
       },
       y: {
         grid: zeroLine
-          ? { color: (ctx) => (ctx.tick.value === 0 ? "rgba(233,237,246,0.35)" : "rgba(164,190,255,0.06)") }
+          ? { color: (ctx) => (ctx.tick.value === 0 ? "rgba(236,244,247,0.35)" : "rgba(124,197,230,0.07)") }
           : grid,
         ticks,
-        title: { display: true, text: title, color: "#8b93a8", font: { size: 11 } },
+        title: { display: true, text: title, color: "#96abb8", font: { size: 11 } },
         // Force every chart's y-axis to the same width so the plot areas
         // line up vertically — otherwise "320" (speed) is wider than "1" (brake).
         afterFit: (scale) => {

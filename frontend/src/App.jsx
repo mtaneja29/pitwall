@@ -214,6 +214,7 @@ function App() {
       const ev = events.find((e) => e.round === round);
       setLoadedMeta({
         eventName: ev?.name ?? "",
+        round,
         sessionName: ev?.sessions?.find((s) => s.code === effectiveSession)?.name ?? "Qualifying",
       });
       setApiStatus("live");
@@ -245,7 +246,7 @@ function App() {
 
   const toSeries = (getY, i) => ({
     label: laps[i].driver,
-    color: laps[i].info?.color ?? (i === 0 ? "#3b82f6" : "#f2f0eb"),
+    color: laps[i].info?.color ?? (i === 0 ? "#7cc5e6" : "#ecf4f7"),
     dash: i === 1 && sameColor,
     points: laps[i].telemetry.map((p) => ({ x: p.Distance, y: getY(p) })),
   });
@@ -269,7 +270,7 @@ function App() {
           title: `Δ ${laps[1].driver} to ${laps[0].driver} (s)`,
           series: [{
             label: `Δ ${laps[1].driver}`,
-            color: sameColor ? "#f2f0eb" : laps[1].info?.color ?? "#f2f0eb",
+            color: sameColor ? "#ecf4f7" : laps[1].info?.color ?? "#ecf4f7",
             points: computeDelta(laps[0].telemetry, laps[1].telemetry),
           }],
           height: 130,
@@ -369,8 +370,15 @@ function App() {
             {/* classification strip, timing-tower style: fastest lap first,
                 purple time per FIA convention */}
             <div className="results">
-              <div className="results-title">
-                {loadedMeta?.eventName} · {loadedMeta?.sessionName}
+              {/* oversized ghost round number — editorial depth, zero layout cost */}
+              <span className="ghost-round" aria-hidden="true">
+                R{loadedMeta?.round}
+              </span>
+              <div className="results-head">
+                <span className="results-event">
+                  {loadedMeta?.eventName?.replace(" Grand Prix", "")}
+                </span>
+                <span className="session-chip">{loadedMeta?.sessionName}</span>
               </div>
               <table>
                 <thead>
@@ -452,7 +460,7 @@ function App() {
           <svg width="220" height="40" viewBox="0 0 220 40" aria-hidden="true">
             <path
               d="M0 32 L30 32 L45 10 L70 10 L82 30 L110 30 L122 8 L150 8 L165 28 L200 28 L220 12"
-              fill="none" stroke="#565e73" strokeWidth="1.5" strokeLinejoin="round"
+              fill="none" stroke="#5c7280" strokeWidth="1.5" strokeLinejoin="round"
             />
           </svg>
           Pick a season, a race, and one or two drivers — then analyze their

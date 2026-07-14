@@ -107,7 +107,17 @@ function TrackMap({ points, label }) {
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Track map colored by speed for ${label}`}>
         {segments.map((s, i) => (
-          <path key={i} d={s.d} stroke={s.color} strokeWidth="3" strokeLinecap="round" fill="none" />
+          <path
+            key={i}
+            className="seg"
+            d={s.d}
+            stroke={s.color}
+            strokeWidth="3"
+            strokeLinecap="round"
+            fill="none"
+            // stagger by index: the racing line draws itself around the lap
+            style={{ animationDelay: `${i * 2}ms` }}
+          />
         ))}
         <line
           x1={sfLine.x1} y1={sfLine.y1} x2={sfLine.x2} y2={sfLine.y2}
