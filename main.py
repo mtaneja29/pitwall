@@ -203,11 +203,18 @@ def get_telemetry(year: int, round: int, driver: str, session: str = "Q"):
     tel["Time"] = tel["Time"].dt.total_seconds()
     data = tel[["Distance", "Speed", "Throttle", "Brake", "nGear", "X", "Y", "Time"]].dropna()
     data = data.round({"Distance": 1, "Speed": 1, "X": 0, "Y": 0, "Time": 3})
+    
+    # Downsample by 50% to save bandwidth and rendering time. FastF1 samples
+    # at ~10-20Hz, which is visually redundant on a 1000px wide chart.
+    data = data.iloc[::2]
+    
     result = {
         "driver": driver,
         "session": code,
         "lap_time": format_lap_time(lap["LapTime"]),
-        "telemetry": data.to_dict(orient="records"),
+        # orient="list" produces {"Distance": [...], "Speed": [...]} instead of
+        # [{"Distance": 1, "Speed": 2}, ...] - saves ~70% payload bloat.
+        "telemetry": data.to_dict(orient="list"),
     }
     # A full session is hundreds of MB of DataFrames; on a 512MB instance we
     # want that memory back the moment the response is built, not whenever

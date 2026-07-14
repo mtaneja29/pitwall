@@ -204,10 +204,29 @@ function App() {
       for (const code of selected) {
         setLoadingCode(code);
         const data = await fetchTelemetry(year, round, code, effectiveSession);
+        
+        // The backend sends column-oriented JSON to save ~70% payload size.
+        // We unpack it here so the rest of the app can still use standard objects.
+        const cols = data.telemetry;
+        const len = cols.Distance?.length || 0;
+        const telemetry = new Array(len);
+        for (let i = 0; i < len; i++) {
+          telemetry[i] = {
+            Distance: cols.Distance[i],
+            Speed: cols.Speed[i],
+            Throttle: cols.Throttle[i],
+            Brake: cols.Brake[i],
+            nGear: cols.nGear[i],
+            X: cols.X[i],
+            Y: cols.Y[i],
+            Time: cols.Time[i],
+          };
+        }
+
         results.push({
           ...data,
+          telemetry,
           info: drivers.find((d) => d.code === code) ?? null,
-          // /drivers returns quali classification order, so index = position
           qualiPos: drivers.findIndex((d) => d.code === code) + 1,
         });
       }

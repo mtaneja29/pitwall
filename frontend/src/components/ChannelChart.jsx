@@ -39,6 +39,7 @@ function ChannelChart({ title, series, xMax, stepped = false, showX = false, hei
     animation: false,
     interaction: { mode: "nearest", axis: "x", intersect: false },
     plugins: {
+      decimation: { enabled: true, algorithm: "lttb" },
       legend: { display: false },
       tooltip: {
         backgroundColor: "rgba(10,10,10,0.95)",
